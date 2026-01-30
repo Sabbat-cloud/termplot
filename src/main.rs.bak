@@ -1,0 +1,210 @@
+// src/main.rs
+mod canvas;
+mod charts;
+
+use charts::ChartContext;
+use colored::{Color, Colorize};
+use rand::Rng;
+use std::{thread, time};
+use std::io::{self, Write};
+
+fn main() {
+    println!("{}", "--- TERMPLOT v0.6:   ---\n".bold().cyan());
+
+    // 1. Gráfico de Barras Coloreado
+    println!("{}", "1. Barras Coloreadas (Ventas por Región)".yellow());
+    let mut chart = ChartContext::new(60, 10);
+    let data_bars = vec![
+        (30.0, Some(Color::Red)),
+        (55.0, Some(Color::Green)),
+        (90.0, Some(Color::Blue)),
+        (45.0, Some(Color::Yellow)), 
+        (70.0, Some(Color::Magenta)),
+        (25.0, None), 
+    ];
+    chart.bar_chart(&data_bars);
+    println!("{}", chart.canvas.render());
+
+    // 2. Scatter Plot
+    println!("\n{}", "2. Scatter Plot".yellow());
+    let mut chart = ChartContext::new(60, 15);
+    let mut rng = rand::thread_rng();
+    
+    let mut series_a = Vec::new();
+    let mut series_b = Vec::new();
+
+    for _ in 0..150 {
+        series_a.push((rng.gen_range(0.0..60.0), rng.gen_range(0.0..60.0)));
+        series_b.push((rng.gen_range(40.0..100.0), rng.gen_range(40.0..100.0)));
+    }
+
+    chart.scatter(&series_a, Some(Color::Red));
+    chart.scatter(&series_b, Some(Color::Cyan));
+    println!("{}", chart.canvas.render());
+
+    // 3. Geometría
+    println!("\n{}", "3. Geometría".yellow());
+    let mut chart = ChartContext::new(40, 20);
+    
+    chart.draw_circle((0.5, 0.5), 0.4, Some(Color::Green));
+    chart.draw_circle((0.5, 0.5), 0.2, Some(Color::Yellow));
+    
+    let triangle = vec![(0.1, 0.1), (0.5, 0.9), (0.9, 0.1)];
+    chart.polygon(&triangle, Some(Color::Magenta));
+    
+    println!("{}", chart.canvas.render());
+
+    // 4. Pastel
+    println!("\n{}", "4. Gráfico de Pastel".yellow());
+    let mut chart = ChartContext::new(40, 20); 
+    let pie_data = vec![
+        (30.0, Some(Color::Red)),    
+        (20.0, Some(Color::Blue)),   
+        (15.0, Some(Color::Green)),  
+        (25.0, Some(Color::Yellow)), 
+        (10.0, Some(Color::White)),  
+    ];
+    chart.pie_chart(&pie_data);
+    println!("{}", chart.canvas.render());
+
+    // 5. Espiral
+    println!("\n{}", "5. Espiral Logarítmica".yellow());
+    let mut chart = ChartContext::new(60, 20);
+    let mut spiral_points = Vec::new();
+    let mut t = 0.0;
+    while t < 8.0 * std::f64::consts::PI {
+        let a = 0.1;
+        let b = 0.2;
+        let r = a * (b*t).exp();
+        let x = r * t.cos() + 50.0;
+        let y = r * t.sin() + 50.0;
+        spiral_points.push((x, y));
+        t += 0.05;
+    }
+    chart.scatter(&spiral_points, Some(Color::BrightBlue));
+    println!("{}", chart.canvas.render());
+
+    // 6. Gráfico de Línea con Título (Estático)
+    println!("\n{}", "6. Serie Temporal Estática".yellow());
+    let mut chart = ChartContext::new(60, 15);
+    
+    let mut points = Vec::new();
+    for i in 0..100 {
+        let x = i as f64 / 10.0;
+        points.push((x, x.sin()));
+    }
+    
+    chart.draw_axes((0.0, 10.0), (-1.0, 1.0), Some(Color::White));
+    chart.line_chart(&points, Some(Color::Cyan));
+    chart.text("Onda Senoidal", 0.4, 0.9, Some(Color::White));
+    
+    println!("{}", chart.canvas.render());
+    
+    // 7. ANIMACIÓN MEJORADA
+    println!("{}", "7. ANIMACIÓN".on_red().white().bold());
+    println!("Renderizando onda en movimiento... (Ctrl+C para salir)");
+    thread::sleep(time::Duration::from_secs(1));
+
+    let width = 60;
+    let height = 15;
+    let mut chart = ChartContext::new(width, height);
+
+    let mut phase = 0.0;
+
+    // Calculamos cuántas líneas ocupa el gráfico para saber cuánto subir el cursor
+    // Altura del canvas + 2 líneas de bordes (arriba/abajo) + 1 línea de texto de estado
+    let lines_to_rewind = height + 2 + 1;
+
+    loop {
+        // 1. Limpiar el canvas lógico (la memoria), no la pantalla
+        chart.canvas.clear();
+
+        // 2. Generar datos
+        let mut points = Vec::new();
+        for i in 0..100 {
+            let x = i as f64 / 10.0;
+            let y = (x + phase).sin();
+            points.push((x, y));
+        }
+
+        // 3. Dibujar en el canvas
+        chart.draw_axes((0.0, 10.0), (-1.0, 1.0), Some(Color::White));
+        chart.line_chart(&points, Some(Color::Cyan));
+        chart.text("Onda Senoidal", 0.4, 0.9, Some(Color::White));
+
+        // 4. Renderizar
+        let output = chart.canvas.render();
+        println!("{}", output);
+        println!("Frame: {:.2} |  lines: {}", phase, lines_to_rewind);
+
+        // 5. Esperar (El usuario ve el frame aquí)
+        thread::sleep(time::Duration::from_millis(50));
+
+        // 6. ¡MAGIA POTAGIA!
+        // Subimos el cursor N líneas hacia arriba para que el próximo print
+        // sobrescriba exactamente este dibujo.
+        // \x1B[<N>A  -> ANSI Escape code para "Cursor Up N lines"
+        print!("\x1B[{}A", lines_to_rewind);
+
+        // Forzamos el vaciado del buffer para asegurar que el cursor se mueva YA
+        io::stdout().flush().unwrap();
+
+        phase += 0.2;
+    }
+
+    // 7. ANIMACIÓN MEJORADA CON REJILLA Y FUNCIÓN DIRECTA
+    println!("{}", "7. ANIMACIÓN PRO (Con Rejilla y Funciones)".on_red().white().bold());
+    println!("Renderizando... (Ctrl+C para salir)");
+    thread::sleep(time::Duration::from_secs(1));
+
+    let width = 60;
+    let height = 15;
+    let mut chart = ChartContext::new(width, height);
+
+    let mut phase = 0.0;
+
+    // Calculamos el retroceso del cursor
+    let lines_to_rewind = height + 2 + 1;
+
+    loop {
+        chart.canvas.clear();
+
+        // 1. Dibujar Rejilla (Gris oscuro para que quede de fondo sutil)
+        // 10 divisiones verticales, 4 horizontales
+        chart.draw_grid(10, 4, Some(Color::TrueColor { r: 60, g: 60, b: 60 }));
+
+        // 2. Dibujar Ejes
+        chart.draw_axes((0.0, 10.0), (-1.5, 1.5), Some(Color::White));
+
+        // 3. Dibujar Función DIRECTAMENTE
+        // Pasamos una "lambda" que recibe x y devuelve y
+        chart.plot_function(
+            |x| (x + phase).sin() * (x * 0.5).cos(), // Función compleja combinada
+            0.0,
+            10.0,
+            Some(Color::Cyan)
+        );
+
+        // Segunda función (desfasada) en otro color
+        chart.plot_function(
+            |x| ((x - phase).cos() * 0.5) - 0.5,
+            0.0,
+            10.0,
+            Some(Color::Magenta)
+        );
+
+        chart.text("Multionda", 0.45, 0.9, Some(Color::Yellow));
+
+        // Renderizado
+        let output = chart.canvas.render();
+        println!("{}", output);
+        println!("Phase: {:.2} | Grid: ON", phase);
+
+        thread::sleep(time::Duration::from_millis(50));
+
+        print!("\x1B[{}A", lines_to_rewind);
+        io::stdout().flush().unwrap();
+
+        phase += 0.1;
+    }
+}
