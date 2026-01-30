@@ -1,0 +1,210 @@
+// src/charts.rs
+use crate::canvas::BrailleCanvas;
+use colored::Color;
+use std::f64::consts::PI;
+
+pub struct ChartContext {
+    pub canvas: BrailleCanvas,
+}
+
+impl ChartContext {
+    pub fn new(width: usize, height: usize) -> Self {
+        Self {
+            canvas: BrailleCanvas::new(width, height),
+        }
+    }
+
+    // Helper para obtener dimensiones en píxeles
+    fn get_px_dims(&self) -> (f64, f64) {
+        ((self.canvas.width * 2) as f64, (self.canvas.height * 4) as f64)
+    }
+
+    /// Nube de puntos con color opcional
+    pub fn scatter(&mut self, points: &[(f64, f64)], color: Option<Color>) {
+        if points.is_empty() { return; }
+
+        let (min_x, max_x) = points.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), p| (min.min(p.0), max.max(p.0)));
+        let (min_y, max_y) = points.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), p| (min.min(p.1), max.max(p.1)));
+
+        let range_x = if (max_x - min_x).abs() < 1e-9 { 1.0 } else { max_x - min_x };
+        let range_y = if (max_y - min_y).abs() < 1e-9 { 1.0 } else { max_y - min_y };
+        let (w_px, h_px) = self.get_px_dims();
+
+        for &(x, y) in points {
+            let px = ((x - min_x) / range_x * (w_px - 1.0)) as usize;
+            let py = ((y - min_y) / range_y * (h_px - 1.0)) as usize;
+            self.canvas.set_pixel(px, py, color);
+        }
+    }
+
+    /// Gráfico de barras con colores por barra opcionales
+    pub fn bar_chart(&mut self, values: &[(f64, Option<Color>)]) {
+        if values.is_empty() { return; }
+        let max_val = values.iter().map(|(v, _)| *v).fold(f64::NEG_INFINITY, f64::max);
+        let w_px = self.canvas.width * 2;
+        let h_px = self.canvas.height * 4;
+        let bar_width = w_px / values.len();
+
+        for (i, &(val, color)) in values.iter().enumerate() {
+            let bar_height = ((val / max_val) * (h_px as f64)).round() as usize;
+            let x_start = i * bar_width;
+            let x_end = x_start + bar_width.saturating_sub(1);
+
+            for x in x_start..x_end {
+                for y in 0..bar_height {
+                    self.canvas.set_pixel(x, y, color);
+                }
+            }
+        }
+    }
+
+    /// Polígono con color opcional
+    pub fn polygon(&mut self, vertices: &[(f64, f64)], color: Option<Color>) {
+        if vertices.len() < 2 { return; }
+        let (w_px, h_px) = self.get_px_dims();
+        let map = |v: (f64, f64)| -> (isize, isize) {
+            ((v.0 * (w_px - 1.0)) as isize, (v.1 * (h_px - 1.0)) as isize)
+        };
+
+        for i in 0..vertices.len() {
+            let p1 = map(vertices[i]);
+            let p2 = map(vertices[(i + 1) % vertices.len()]);
+            self.canvas.line(p1.0, p1.1, p2.0, p2.1, color);
+        }
+    }
+
+    /// Dibuja un círculo en coordenadas normalizadas (0.0-1.0)
+    pub fn draw_circle(&mut self, center: (f64, f64), radius_norm: f64, color: Option<Color>) {
+        let (w_px, h_px) = self.get_px_dims();
+        let min_dim = w_px.min(h_px);
+
+        let r_px = (radius_norm * min_dim) as isize;
+        let cx_px = (center.0 * (w_px - 1.0)) as isize;
+        let cy_px = (center.1 * (h_px - 1.0)) as isize;
+
+        self.canvas.circle(cx_px, cy_px, r_px, color);
+    }
+
+    /// Gráfico de Pastel (Estilo Radar/Radios)
+    pub fn pie_chart(&mut self, slices: &[(f64, Option<Color>)]) {
+        let total: f64 = slices.iter().map(|(v, _)| v).sum();
+        if total <= 0.0 { return; }
+
+        let (w_px, h_px) = self.get_px_dims();
+        let cx = (w_px / 2.0) as isize;
+        let cy = (h_px / 2.0) as isize;
+        let radius = (w_px.min(h_px) / 2.0 * 0.9) as f64;
+
+        let mut current_angle = 0.0;
+
+        for (value, color) in slices {
+            let slice_angle = (value / total) * 2.0 * PI;
+            let end_angle = current_angle + slice_angle;
+
+            let end_x = cx + (radius * end_angle.cos()) as isize;
+            let end_y = cy + (radius * end_angle.sin()) as isize;
+
+            self.canvas.line(cx, cy, end_x, end_y, *color);
+
+            current_angle = end_angle;
+        }
+         self.canvas.circle(cx, cy, radius as isize, None);
+    }
+
+    /// Escribe texto en coordenadas del gráfico (0.0 - 1.0)
+    pub fn text(&mut self, text: &str, x_norm: f64, y_norm: f64, color: Option<Color>) {
+    let cx = (x_norm * (self.canvas.width - 1) as f64).round() as usize;
+    let cy = (y_norm * (self.canvas.height - 1) as f64).round() as usize;
+
+    for (i, ch) in text.chars().enumerate() {
+        let x = cx + i;
+        if x >= self.canvas.width { break; }
+        self.canvas.set_char(x, cy, ch, color);
+    }
+}
+    /// Gráfico de Línea (conecta puntos ordenados)
+    pub fn line_chart(&mut self, points: &[(f64, f64)], color: Option<Color>) {
+        if points.len() < 2 { return; }
+
+        let (min_x, max_x) = points.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), p| (min.min(p.0), max.max(p.0)));
+        let (min_y, max_y) = points.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), p| (min.min(p.1), max.max(p.1)));
+
+        let range_x = if (max_x - min_x).abs() < 1e-9 { 1.0 } else { max_x - min_x };
+        let range_y = if (max_y - min_y).abs() < 1e-9 { 1.0 } else { max_y - min_y };
+
+        let (w_px, h_px) = self.get_px_dims();
+
+        let map = |p: (f64, f64)| -> (isize, isize) {
+            let px = ((p.0 - min_x) / range_x * (w_px - 1.0)) as isize;
+            let py = ((p.1 - min_y) / range_y * (h_px - 1.0)) as isize;
+            (px, py)
+        };
+
+        for window in points.windows(2) {
+            let p0 = map(window[0]);
+            let p1 = map(window[1]);
+            self.canvas.line(p0.0, p0.1, p1.0, p1.1, color);
+        }
+    }
+
+    // --- Dibuja una rejilla de fondo ---
+    pub fn draw_grid(&mut self, divs_x: usize, divs_y: usize, color: Option<Color>) {
+        let (w_px, h_px) = self.get_px_dims();
+
+        // Líneas Verticales
+        for i in 1..divs_x {
+            let x = (i as f64 / divs_x as f64 * (w_px - 1.0)).round() as isize;
+            self.canvas.line(x, 0, x, h_px as isize - 1, color);
+        }
+
+        // Líneas Horizontales
+        for i in 1..divs_y {
+            let y = (i as f64 / divs_y as f64 * (h_px - 1.0)).round() as isize;
+            self.canvas.line(0, y, w_px as isize - 1, y, color);
+        }
+    }
+
+    // Plotea una función matemática directamente ---
+    // Acepta una clausura (closure) como |x| x.sin()
+    pub fn plot_function<F>(&mut self, func: F, min_x: f64, max_x: f64, color: Option<Color>)
+    where F: Fn(f64) -> f64 {
+        // Resolución: 1 punto por cada píxel horizontal del canvas
+        let steps = self.canvas.width * 2;
+        let mut points = Vec::with_capacity(steps);
+
+        for i in 0..=steps {
+            let t = i as f64 / steps as f64;
+            let x = min_x + t * (max_x - min_x);
+            let y = func(x);
+            // Solo añadimos si es un número válido
+            if y.is_finite() {
+                points.push((x, y));
+            }
+        }
+        self.line_chart(&points, color);
+    }
+
+    /// Dibuja un marco alrededor del gráfico con etiquetas de rango min/max
+    pub fn draw_axes(&mut self, x_range: (f64, f64), y_range: (f64, f64), color: Option<Color>) {
+        let (w_px, h_px) = self.get_px_dims();
+        // Ya no se usan w y h
+        //let w = self.canvas.width;
+        //let h = self.canvas.height;
+
+        // Ejes/Marco
+        self.canvas.line(0, 0, 0, h_px as isize - 1, color); // Izq
+        self.canvas.line(0, 0, w_px as isize - 1, 0, color); // Abajo
+
+        // Etiquetas Eje Y
+        let y_max_str = format!("{:.1}", y_range.1);
+        let y_min_str = format!("{:.1}", y_range.0);
+        self.text(&y_max_str, 0.0, 1.0, color);
+        self.text(&y_min_str, 0.0, 0.0, color);
+
+        // Etiquetas Eje X
+        let x_min_str = format!("{:.1}", x_range.0);
+        let x_max_str = format!("{:.1}", x_range.1);
+        self.text(&x_min_str, 0.1, 0.0, color);
+        self.text(&x_max_str, 0.9, 0.0, color);
+    }
+}
