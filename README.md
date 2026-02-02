@@ -305,7 +305,6 @@ fn main() {
 
 ## 🗺️ Roadmap (ideas para v0.8+)
 
-* `clear()` también limpia `text_layer`.
 * Mejor manejo de límites en `text()` y en `bar_chart()` cuando hay muchas barras.
 * “Auto-range” configurable: padding y clamping.
 * Leyenda / labels verticales.

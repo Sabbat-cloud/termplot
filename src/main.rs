@@ -80,8 +80,22 @@ fn main() {
     chart.text("Onda Senoidal", 0.4, 0.9, Some(Color::White));
     println!("{}", chart.canvas.render());
 
+    // 7 - Función matemática + rejilla + ejes
+    println!("\n{}", "7. Función + rejilla + ejes".yellow());   
+    let mut chart = ChartContext::new(60, 15);
 
-    // --- 7. ANIMACIÓN PRO (ÚNICO BUCLE ACTIVO) ---
+    chart.draw_grid(10, 4, Some(Color::TrueColor{ r:80, g:80, b:80 }));
+    chart.draw_axes((0.0, 10.0), (-1.5, 1.5), Some(Color::White));
+
+    chart.plot_function(|x| x.sin(), 0.0, 10.0, Some(Color::Cyan));
+    chart.plot_function(|x| (x*0.5).cos()*0.5, 0.0, 10.0, Some(Color::Magenta));
+
+    chart.text("sin(x)", 0.75, 0.85, Some(Color::Cyan));
+    chart.text("0.5*cos(0.5x)", 0.55, 0.10, Some(Color::Magenta));
+    
+    println!("{}", chart.canvas.render());
+
+    // --- 8. ANIMACIÓN PRO (ÚNICO BUCLE ACTIVO) ---
     
     println!("\n{}", "7. ANIMACIÓN PRO (Con Rejilla y Funciones)".on_red().white().bold());
     println!("Renderizando... (Ctrl+C para salir)");
@@ -136,4 +150,5 @@ fn main() {
 
         phase += 0.1;
     }
+
 }
