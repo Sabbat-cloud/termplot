@@ -3,6 +3,18 @@ use crate::canvas::BrailleCanvas;
 use colored::Color;
 use std::f64::consts::PI;
 
+pub struct ChartOptions {
+    pub padding: f64,
+    pub clamp_min: Option<f64>,
+    pub clamp_max: Option<f64>,
+}
+
+impl Default for ChartOptions {
+    fn default() -> Self {
+        Self { padding: 0.1, clamp_min: None, clamp_max: None }
+    }
+}
+
 pub struct ChartContext {
     pub canvas: BrailleCanvas,
 }
@@ -39,24 +51,26 @@ impl ChartContext {
 
     /// Gráfico de barras con colores por barra opcionales
     pub fn bar_chart(&mut self, values: &[(f64, Option<Color>)]) {
-        if values.is_empty() { return; }
-        let max_val = values.iter().map(|(v, _)| *v).fold(f64::NEG_INFINITY, f64::max);
-        let w_px = self.canvas.width * 2;
-        let h_px = self.canvas.height * 4;
-        let bar_width = w_px / values.len();
+    if values.is_empty() { return; }
+    let max_val = values.iter().map(|(v, _)| *v).fold(f64::NEG_INFINITY, f64::max);
+    let w_px = self.canvas.width * 2;
+    let h_px = self.canvas.height * 4;
 
-        for (i, &(val, color)) in values.iter().enumerate() {
-            let bar_height = ((val / max_val) * (h_px as f64)).round() as usize;
-            let x_start = i * bar_width;
-            let x_end = x_start + bar_width.saturating_sub(1);
+    // Si hay más barras que píxeles, forzamos un ancho mínimo de 1
+    let bar_width = (w_px / values.len()).max(1);
 
-            for x in x_start..x_end {
-                for y in 0..bar_height {
-                    self.canvas.set_pixel(x, y, color);
-                }
+    for (i, &(val, color)) in values.iter().enumerate() {
+        let bar_height = ((val / max_val) * (h_px as f64)).round() as usize;
+        let x_start = i * bar_width;
+        let x_end = (x_start + bar_width).min(w_px); // Evita desbordamiento horizontal
+
+        for x in x_start..x_end {
+            for y in 0..bar_height.min(h_px) {
+                self.canvas.set_pixel(x, y, color);
             }
         }
     }
+}
 
     /// Polígono con color opcional
     pub fn polygon(&mut self, vertices: &[(f64, f64)], color: Option<Color>) {
@@ -113,14 +127,16 @@ impl ChartContext {
 
     /// Escribe texto en coordenadas del gráfico (0.0 - 1.0)
     pub fn text(&mut self, text: &str, x_norm: f64, y_norm: f64, color: Option<Color>) {
-        let cx = (x_norm * (self.canvas.width - 1) as f64).round() as usize;
-        let cy = (y_norm * (self.canvas.height - 1) as f64).round() as usize;
+    // Clamping para asegurar que el inicio esté dentro del canvas
+    let cx = (x_norm * (self.canvas.width.saturating_sub(1)) as f64).round() as usize;
+    let cy = (y_norm * (self.canvas.height.saturating_sub(1)) as f64).round() as usize;
 
-        for (i, char) in text.chars().enumerate() {
-            self.canvas.set_char(cx + i, cy, char, color);
-        }
+    for (i, ch) in text.chars().enumerate() {
+        let x = cx + i;
+        if x >= self.canvas.width || cy >= self.canvas.height { break; } // Límite de seguridad
+        self.canvas.set_char(x, cy, ch, color);
     }
-
+}
     /// Gráfico de Línea (conecta puntos ordenados)
     pub fn line_chart(&mut self, points: &[(f64, f64)], color: Option<Color>) {
         if points.len() < 2 { return; }

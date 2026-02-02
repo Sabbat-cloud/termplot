@@ -129,32 +129,69 @@ impl BrailleCanvas {
         }
     }
 
-    /// Renderiza el canvas combinando forma y color
+    pub fn set_char_vertical(&mut self, char_x: usize, char_y_start: usize, text: &str, color: Option<Color>) {
+        for (i, ch) in text.chars().enumerate() {
+            let y = char_y_start.saturating_sub(i);
+            self.set_char(char_x, y, ch, color); // Reutiliza lógica de inversión de Y
+            }   
+    }   
     pub fn render(&self) -> String {
+        self.render_with_options(true, None)
+    }
+
+    /// RENDER NO COLOR
+    pub fn render_no_color(&self) -> String {
         let mut output = String::new();
-        output.push_str(&format!("┌{}┐\n", "─".repeat(self.width)));
+        for row_masks in &self.grid {
+            for &mask in row_masks {
+                let ch = std::char::from_u32(0x2800 + mask as u32).unwrap_or(' ');
+                output.push(ch);
+            }
+            output.push('\n');
+        }
+        output
+    }
+
+    /// Renderiza el canvas combinando forma y color con opciones extendidas
+    pub fn render_with_options(&self, show_border: bool, title: Option<&str>) -> String {
+        let mut output = String::new();
+        
+        // Título opcional centrado
+        if let Some(t) = title {
+            output.push_str(&format!("{:^width$}\n", t, width = self.width + 2));
+        }
+
+        // Borde superior opcional
+        if show_border {
+            output.push_str(&format!("┌{}┐\n", "─".repeat(self.width)));
+        }
 
         for (r_idx, row_masks) in self.grid.iter().enumerate() {
-            output.push('│');
+            if show_border { output.push('│'); }
+            
             for (c_idx, &mask) in row_masks.iter().enumerate() {
-                // LÓGICA DE MEZCLA:
-                // Si hay texto explícito, gana el texto. Si no, se dibuja el Braille.
                 let char_to_print = if let Some(c) = self.text_layer[r_idx][c_idx] {
                     c.to_string()
                 } else {
                     std::char::from_u32(0x2800 + mask as u32).unwrap_or(' ').to_string()
                 };
 
-                // Aplicar color
                 if let Some(color) = self.color_grid[r_idx][c_idx] {
                     output.push_str(&char_to_print.color(color).to_string());
                 } else {
                     output.push_str(&char_to_print);
                 }
             }
-            output.push_str("│\n");
+            
+            if show_border { output.push('│'); }
+            output.push('\n');
         }
-        output.push_str(&format!("└{}┘", "─".repeat(self.width)));
+
+        // Borde inferior opcional
+        if show_border {
+            output.push_str(&format!("└{}┘", "─".repeat(self.width)));
+        }
+        
         output
     }
 }

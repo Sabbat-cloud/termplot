@@ -6,12 +6,12 @@ use charts::ChartContext;
 use colored::{Color, Colorize};
 use rand::Rng;
 use std::{thread, time};
-use std::io::{self, Write}; 
+use std::io::{self, Write};
 
 fn main() {
-    println!("{}", "--- TERMPLOT v0.7: FINAL CON REJILLA ---\n".bold().cyan());
+    println!("{}", "--- TERMPLOT v0.8: ROADMAP UPDATE ---\n".bold().cyan());
 
-    // --- EJEMPLOS ESTÁTICOS (1 al 6) ---
+    // --- EJEMPLOS ESTÁTICOS (1 al 7) ---
 
     // 1. Gráfico de Barras Coloreado
     println!("{}", "1. Barras Coloreadas".yellow());
@@ -83,72 +83,74 @@ fn main() {
     // 7 - Función matemática + rejilla + ejes
     println!("\n{}", "7. Función + rejilla + ejes".yellow());   
     let mut chart = ChartContext::new(60, 15);
-
     chart.draw_grid(10, 4, Some(Color::TrueColor{ r:80, g:80, b:80 }));
     chart.draw_axes((0.0, 10.0), (-1.5, 1.5), Some(Color::White));
-
     chart.plot_function(|x| x.sin(), 0.0, 10.0, Some(Color::Cyan));
     chart.plot_function(|x| (x*0.5).cos()*0.5, 0.0, 10.0, Some(Color::Magenta));
-
     chart.text("sin(x)", 0.75, 0.85, Some(Color::Cyan));
     chart.text("0.5*cos(0.5x)", 0.55, 0.10, Some(Color::Magenta));
-    
     println!("{}", chart.canvas.render());
 
-    // --- 8. ANIMACIÓN PRO (ÚNICO BUCLE ACTIVO) ---
+    // --- 8. NUEVAS OPCIONES v0.8+ ---
+    println!("\n{}", "8. OPCIONES v0.8+ (Sin Color / Títulos)".yellow());
+    let mut v8_chart = ChartContext::new(40, 10);
+    v8_chart.draw_grid(5, 2, Some(Color::White));
+    v8_chart.plot_function(|x| x.cos(), 0.0, 6.28, Some(Color::Green));
+    v8_chart.text("Cosine", 0.4, 0.8, None);
+
+    // Sub-ejemplo A: Sin color (ASCII/Braille puro)
+    println!("{}", "\nA) Renderizado sin color (render_no_color):".bright_black());
+    println!("{}", v8_chart.canvas.render_no_color());
+
+    // Sub-ejemplo B: Con título centrado y sin bordes
+    println!("{}", "\nB) Con título y sin bordes (render_with_options):".bright_black());
+    println!("{}", v8_chart.canvas.render_with_options(false, Some("MI GRÁFICO PERSONALIZADO")));
+
+    // -9 AUTO RANGE
+
+    println!("\n{}", "9. Ajuste Automático (Auto-Range)".yellow());
+    let mut chart = ChartContext::new(60, 15);
+
+    // Datos aleatorios en un rango desconocido
+    let points: Vec<(f64, f64)> = (0..50).map(|i| (i as f64, (i as f64 * 0.2).sin() * 50.0 + 20.0)).collect();
+
+    // Calculamos el rango automáticamente con un 10% de margen
+    let (range_x, range_y) = ChartContext::get_auto_range(&points, 0.1);
+
+    chart.draw_grid(10, 4, Some(Color::TrueColor{r:40, g:40, b:40}));
+    chart.draw_axes(range_x, range_y, Some(Color::White));
+    chart.line_chart(&points, Some(Color::Yellow));
+    chart.text("Auto-Scaled", 0.4, 0.9, Some(Color::Yellow));
+
+    println!("{}", chart.canvas.render());
     
-    println!("\n{}", "7. ANIMACIÓN PRO (Con Rejilla y Funciones)".on_red().white().bold());
+    // --- 10. ANIMACIÓN PRO ---
+    
+    println!("\n{}", "10. ANIMACIÓN PRO (Con Rejilla y Funciones)".on_red().white().bold());
     println!("Renderizando... (Ctrl+C para salir)");
     thread::sleep(time::Duration::from_secs(1));
 
     let width = 60;
     let height = 15;
     let mut chart = ChartContext::new(width, height);
-    
     let mut phase = 0.0;
-    
-    // Calculamos el retroceso del cursor (altura + marcos + texto extra)
     let lines_to_rewind = height + 2 + 1;
 
     loop {
-        // 1. Limpiar memoria
         chart.canvas.clear();
-
-        // 2. Dibujar Rejilla de fondo
-        chart.draw_grid(10, 4, Some(Color::TrueColor { r: 60, g: 60, b: 60 })); 
-
-        // 3. Dibujar Ejes
+        chart.draw_grid(10, 4, Some(Color::TrueColor { r: 60, g: 60, b: 60 }));
         chart.draw_axes((0.0, 10.0), (-1.5, 1.5), Some(Color::White));
-
-        // 4. Dibujar Funciones matemáticas
-        // Función 1: Onda compleja (Cyan)
-        chart.plot_function(
-            |x| (x + phase).sin() * (x * 0.5).cos(), 
-            0.0, 10.0, Some(Color::Cyan)
-        );
-        
-        // Función 2: Onda de contrapeso (Magenta)
-        chart.plot_function(
-            |x| ((x - phase * 1.5).cos() * 0.5) - 0.5, 
-            0.0, 10.0, Some(Color::Magenta)
-        );
-
-        // 5. Texto informativo
+        chart.plot_function(|x| (x + phase).sin() * (x * 0.5).cos(), 0.0, 10.0, Some(Color::Cyan));
+        chart.plot_function(|x| ((x - phase * 1.5).cos() * 0.5) - 0.5, 0.0, 10.0, Some(Color::Magenta));
         chart.text("Sistema Dual", 0.40, 0.9, Some(Color::Yellow));
 
-        // 6. Renderizar y mostrar
         let output = chart.canvas.render();
         println!("{}", output);
         println!("Phase: {:.2} | Grid: ON | Funcs: 2", phase);
 
-        // 7. Esperar y rebobinar cursor
         thread::sleep(time::Duration::from_millis(50));
-        
-        // Subimos el cursor para sobrescribir en el siguiente frame
         print!("\x1B[{}A", lines_to_rewind);
         io::stdout().flush().unwrap();
-
         phase += 0.1;
     }
-
 }

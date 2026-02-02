@@ -3,6 +3,18 @@ use crate::canvas::BrailleCanvas;
 use colored::Color;
 use std::f64::consts::PI;
 
+pub struct ChartOptions {
+    pub padding: f64,
+    pub clamp_min: Option<f64>,
+    pub clamp_max: Option<f64>,
+}
+
+impl Default for ChartOptions {
+    fn default() -> Self {
+        Self { padding: 0.1, clamp_min: None, clamp_max: None }
+    }
+}
+
 pub struct ChartContext {
     pub canvas: BrailleCanvas,
 }
@@ -12,6 +24,19 @@ impl ChartContext {
         Self {
             canvas: BrailleCanvas::new(width, height),
         }
+    }
+
+    pub fn get_auto_range(points: &[(f64, f64)], padding: f64) -> ((f64, f64), (f64, f64)) {
+        if points.is_empty() { return ((0.0, 1.0), (0.0, 1.0)); }
+
+        let (min_x, max_x) = points.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), p| (min.min(p.0), max.max(p.0)));
+        let (min_y, max_y) = points.iter().fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), p| (min.min(p.1), max.max(p.1)));
+
+        let rx = if (max_x - min_x).abs() < 1e-9 { 1.0 } else { max_x - min_x };
+        let ry = if (max_y - min_y).abs() < 1e-9 { 1.0 } else { max_y - min_y };
+
+        ((min_x - rx * padding, max_x + rx * padding),
+         (min_y - ry * padding, max_y + ry * padding))
     }
 
     // Helper para obtener dimensiones en píxeles
@@ -43,20 +68,24 @@ impl ChartContext {
         let max_val = values.iter().map(|(v, _)| *v).fold(f64::NEG_INFINITY, f64::max);
         let w_px = self.canvas.width * 2;
         let h_px = self.canvas.height * 4;
-        let bar_width = w_px / values.len();
 
-        for (i, &(val, color)) in values.iter().enumerate() {
-            let bar_height = ((val / max_val) * (h_px as f64)).round() as usize;
-            let x_start = i * bar_width;
-            let x_end = x_start + bar_width.saturating_sub(1);
+    // Si hay más barras que píxeles, forzamos un ancho mínimo de 1
+    let bar_width = (w_px / values.len()).max(1);
 
-            for x in x_start..x_end {
-                for y in 0..bar_height {
-                    self.canvas.set_pixel(x, y, color);
-                }
+    for (i, &(val, color)) in values.iter().enumerate() {
+        let bar_height = ((val / max_val) * (h_px as f64)).round() as usize;
+        let x_start = i * bar_width;
+        let x_end = (x_start + bar_width).min(w_px); // Evita desbordamiento horizontal
+
+        if x_start >= w_px { break; } // No dibujar fuera del canvas
+
+        for x in x_start..x_end {
+            for y in 0..bar_height.min(h_px) {
+                self.canvas.set_pixel(x, y, color);
             }
         }
     }
+}
 
     /// Polígono con color opcional
     pub fn polygon(&mut self, vertices: &[(f64, f64)], color: Option<Color>) {
@@ -113,12 +142,13 @@ impl ChartContext {
 
     /// Escribe texto en coordenadas del gráfico (0.0 - 1.0)
     pub fn text(&mut self, text: &str, x_norm: f64, y_norm: f64, color: Option<Color>) {
-    let cx = (x_norm * (self.canvas.width - 1) as f64).round() as usize;
-    let cy = (y_norm * (self.canvas.height - 1) as f64).round() as usize;
+    // Clamping para asegurar que el inicio esté dentro del canvas
+    let cx = (x_norm * (self.canvas.width.saturating_sub(1)) as f64).round() as usize;
+    let cy = (y_norm * (self.canvas.height.saturating_sub(1)) as f64).round() as usize;
 
     for (i, ch) in text.chars().enumerate() {
         let x = cx + i;
-        if x >= self.canvas.width { break; }
+        if x >= self.canvas.width || cy >= self.canvas.height { break; } // Límite de seguridad
         self.canvas.set_char(x, cy, ch, color);
     }
 }
@@ -187,21 +217,16 @@ impl ChartContext {
     /// Dibuja un marco alrededor del gráfico con etiquetas de rango min/max
     pub fn draw_axes(&mut self, x_range: (f64, f64), y_range: (f64, f64), color: Option<Color>) {
         let (w_px, h_px) = self.get_px_dims();
-        // Ya no se usan w y h
-        //let w = self.canvas.width;
-        //let h = self.canvas.height;
+        self.canvas.line(0, 0, 0, h_px as isize - 1, color); 
+        self.canvas.line(0, 0, w_px as isize - 1, 0, color); 
 
-        // Ejes/Marco
-        self.canvas.line(0, 0, 0, h_px as isize - 1, color); // Izq
-        self.canvas.line(0, 0, w_px as isize - 1, 0, color); // Abajo
-
-        // Etiquetas Eje Y
         let y_max_str = format!("{:.1}", y_range.1);
         let y_min_str = format!("{:.1}", y_range.0);
-        self.text(&y_max_str, 0.0, 1.0, color);
+        
+        self.text(&y_max_str, 0.0, 1.0, color);  // Izquierda
+        self.text(&y_max_str, 0.92, 1.0, color); // Derecha
         self.text(&y_min_str, 0.0, 0.0, color);
 
-        // Etiquetas Eje X
         let x_min_str = format!("{:.1}", x_range.0);
         let x_max_str = format!("{:.1}", x_range.1);
         self.text(&x_min_str, 0.1, 0.0, color);
