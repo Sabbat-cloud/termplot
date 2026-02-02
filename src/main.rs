@@ -54,23 +54,34 @@ fn main() {
     ];
     chart.pie_chart(&pie_data);
     println!("{}", chart.canvas.render());
-
-    // 5. Espiral
-    println!("\n{}", "5. Espiral Logarítmica".yellow());
+    
+    // 5. Espiral Logarítmica (Actualizada v0.8 con Auto-Range)
+    println!("\n{}", "5. Espiral Logarítmica (Auto-Scaled)".yellow());
     let mut chart = ChartContext::new(60, 20);
     let mut spiral_points = Vec::new();
     let mut t = 0.0;
+
+    // Generamos los puntos de la espiral
     while t < 8.0 * std::f64::consts::PI {
-        let a = 0.1; let b = 0.2;
-        let r = a * (b*t).exp();
-        let x = r * t.cos() + 50.0;
-        let y = r * t.sin() + 50.0;
+        let a = 0.1;
+        let b = 0.2;
+        let r = a * (b * t).exp();
+        let x = r * t.cos();
+        let y = r * t.sin();
         spiral_points.push((x, y));
         t += 0.05;
     }
-    chart.scatter(&spiral_points, Some(Color::BrightBlue));
-    println!("{}", chart.canvas.render());
 
+    // NUEVO: Ajuste automático de ejes para la geometría de la espiral
+    let (range_x, range_y) = ChartContext::get_auto_range(&spiral_points, 0.1);
+
+    chart.draw_grid(8, 4, Some(Color::TrueColor { r: 50, g: 50, b: 50 }));
+    chart.draw_axes(range_x, range_y, Some(Color::White));
+    chart.scatter(&spiral_points, Some(Color::BrightBlue));
+
+    chart.text("Spiral Analysis", 0.35, 0.9, Some(Color::White));
+    println!("{}", chart.canvas.render());
+    
     // 6. Serie Temporal Estática (con ejes)
     println!("\n{}", "6. Serie Temporal Estática".yellow());
     let mut chart = ChartContext::new(60, 15);
