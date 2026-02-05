@@ -110,7 +110,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "termplot"
+name = "termplot-rs"
 version = "0.1.0"
 dependencies = [
  "colored",
