@@ -1,15 +1,15 @@
-// src/main.rs
-mod canvas;
-mod charts;
-
-use charts::ChartContext;
 use colored::{Color, Colorize};
 use rand::Rng;
-use std::{thread, time};
 use std::io::{self, Write};
+use std::{thread, time};
+use termplot::ChartContext;
+use std::f64::consts::TAU;
 
 fn main() {
-    println!("{}", "--- TERMPLOT v0.8: ROADMAP UPDATE ---\n".bold().cyan());
+    println!(
+        "{}",
+        "--- TERMPLOT v0.8: ROADMAP UPDATE ---\n".bold().cyan()
+    );
 
     // --- EJEMPLOS ESTÁTICOS (1 al 7) ---
 
@@ -17,8 +17,12 @@ fn main() {
     println!("{}", "1. Barras Coloreadas".yellow());
     let mut chart = ChartContext::new(60, 10);
     let data_bars = vec![
-        (30.0, Some(Color::Red)), (55.0, Some(Color::Green)), (90.0, Some(Color::Blue)),
-        (45.0, Some(Color::Yellow)), (70.0, Some(Color::Magenta)), (25.0, None), 
+        (30.0, Some(Color::Red)),
+        (55.0, Some(Color::Green)),
+        (90.0, Some(Color::Blue)),
+        (45.0, Some(Color::Yellow)),
+        (70.0, Some(Color::Magenta)),
+        (25.0, None),
     ];
     chart.bar_chart(&data_bars);
     println!("{}", chart.canvas.render());
@@ -47,14 +51,17 @@ fn main() {
 
     // 4. Pastel
     println!("\n{}", "4. Gráfico de Pastel".yellow());
-    let mut chart = ChartContext::new(40, 20); 
+    let mut chart = ChartContext::new(40, 20);
     let pie_data = vec![
-        (30.0, Some(Color::Red)), (20.0, Some(Color::Blue)), (15.0, Some(Color::Green)),  
-        (25.0, Some(Color::Yellow)), (10.0, Some(Color::White)),  
+        (30.0, Some(Color::Red)),
+        (20.0, Some(Color::Blue)),
+        (15.0, Some(Color::Green)),
+        (25.0, Some(Color::Yellow)),
+        (10.0, Some(Color::White)),
     ];
     chart.pie_chart(&pie_data);
     println!("{}", chart.canvas.render());
-    
+
     // 5. Espiral Logarítmica (Actualizada v0.8 con Auto-Range)
     println!("\n{}", "5. Espiral Logarítmica (Auto-Scaled)".yellow());
     let mut chart = ChartContext::new(60, 20);
@@ -75,29 +82,58 @@ fn main() {
     // NUEVO: Ajuste automático de ejes para la geometría de la espiral
     let (range_x, range_y) = ChartContext::get_auto_range(&spiral_points, 0.1);
 
-    chart.draw_grid(8, 4, Some(Color::TrueColor { r: 50, g: 50, b: 50 }));
+    chart.draw_grid(
+        8,
+        4,
+        Some(Color::TrueColor {
+            r: 50,
+            g: 50,
+            b: 50,
+        }),
+    );
     chart.draw_axes(range_x, range_y, Some(Color::White));
     chart.scatter(&spiral_points, Some(Color::BrightBlue));
 
     chart.text("Spiral Analysis", 0.35, 0.9, Some(Color::White));
     println!("{}", chart.canvas.render());
-    
+
     // 6. Serie Temporal Estática (con ejes)
     println!("\n{}", "6. Serie Temporal Estática".yellow());
     let mut chart = ChartContext::new(60, 15);
-    chart.draw_grid(10, 4, Some(Color::TrueColor{r:100, g:100, b:100})); // Rejilla suave
+    chart.draw_grid(
+        10,
+        4,
+        Some(Color::TrueColor {
+            r: 100,
+            g: 100,
+            b: 100,
+        }),
+    ); // Rejilla suave
     chart.draw_axes((0.0, 10.0), (-1.0, 1.0), Some(Color::White));
-    chart.plot_function(|x| x.sin(), 0.0, 10.0, Some(Color::Cyan));
+    chart.plot_function(|x: f64| x.sin(), 0.0, 10.0, Some(Color::Cyan));
     chart.text("Onda Senoidal", 0.4, 0.9, Some(Color::White));
     println!("{}", chart.canvas.render());
 
     // 7 - Función matemática + rejilla + ejes
-    println!("\n{}", "7. Función + rejilla + ejes".yellow());   
+    println!("\n{}", "7. Función + rejilla + ejes".yellow());
     let mut chart = ChartContext::new(60, 15);
-    chart.draw_grid(10, 4, Some(Color::TrueColor{ r:80, g:80, b:80 }));
+    chart.draw_grid(
+        10,
+        4,
+        Some(Color::TrueColor {
+            r: 80,
+            g: 80,
+            b: 80,
+        }),
+    );
     chart.draw_axes((0.0, 10.0), (-1.5, 1.5), Some(Color::White));
-    chart.plot_function(|x| x.sin(), 0.0, 10.0, Some(Color::Cyan));
-    chart.plot_function(|x| (x*0.5).cos()*0.5, 0.0, 10.0, Some(Color::Magenta));
+    chart.plot_function(|x: f64| x.sin(), 0.0, 10.0, Some(Color::Cyan));
+    chart.plot_function(
+        |x: f64| (x * 0.5).cos() * 0.5,
+        0.0,
+        10.0,
+        Some(Color::Magenta),
+    );
     chart.text("sin(x)", 0.75, 0.85, Some(Color::Cyan));
     chart.text("0.5*cos(0.5x)", 0.55, 0.10, Some(Color::Magenta));
     println!("{}", chart.canvas.render());
@@ -106,38 +142,63 @@ fn main() {
     println!("\n{}", "8. OPCIONES v0.8+ (Sin Color / Títulos)".yellow());
     let mut v8_chart = ChartContext::new(40, 10);
     v8_chart.draw_grid(5, 2, Some(Color::White));
-    v8_chart.plot_function(|x| x.cos(), 0.0, 6.28, Some(Color::Green));
+    v8_chart.plot_function(|x: f64| x.cos(), 0.0, TAU, Some(Color::Green));
     v8_chart.text("Cosine", 0.4, 0.8, None);
 
     // Sub-ejemplo A: Sin color (ASCII/Braille puro)
-    println!("{}", "\nA) Renderizado sin color (render_no_color):".bright_black());
+    println!(
+        "{}",
+        "\nA) Renderizado sin color (render_no_color):".bright_black()
+    );
     println!("{}", v8_chart.canvas.render_no_color());
 
     // Sub-ejemplo B: Con título centrado y sin bordes
-    println!("{}", "\nB) Con título y sin bordes (render_with_options):".bright_black());
-    println!("{}", v8_chart.canvas.render_with_options(false, Some("MI GRÁFICO PERSONALIZADO")));
+    println!(
+        "{}",
+        "\nB) Con título y sin bordes (render_with_options):".bright_black()
+    );
+    println!(
+        "{}",
+        v8_chart
+            .canvas
+            .render_with_options(false, Some("MI GRÁFICO PERSONALIZADO"))
+    );
 
-    // -9 AUTO RANGE
-
+    // 9 AUTO RANGE
     println!("\n{}", "9. Ajuste Automático (Auto-Range)".yellow());
     let mut chart = ChartContext::new(60, 15);
 
     // Datos aleatorios en un rango desconocido
-    let points: Vec<(f64, f64)> = (0..50).map(|i| (i as f64, (i as f64 * 0.2).sin() * 50.0 + 20.0)).collect();
+    let points: Vec<(f64, f64)> = (0..50)
+        .map(|i| (i as f64, (i as f64 * 0.2).sin() * 50.0 + 20.0))
+        .collect();
 
     // Calculamos el rango automáticamente con un 10% de margen
     let (range_x, range_y) = ChartContext::get_auto_range(&points, 0.1);
 
-    chart.draw_grid(10, 4, Some(Color::TrueColor{r:40, g:40, b:40}));
+    chart.draw_grid(
+        10,
+        4,
+        Some(Color::TrueColor {
+            r: 40,
+            g: 40,
+            b: 40,
+        }),
+    );
     chart.draw_axes(range_x, range_y, Some(Color::White));
     chart.line_chart(&points, Some(Color::Yellow));
     chart.text("Auto-Scaled", 0.4, 0.9, Some(Color::Yellow));
 
     println!("{}", chart.canvas.render());
-    
+
     // --- 10. ANIMACIÓN PRO ---
-    
-    println!("\n{}", "10. ANIMACIÓN PRO (Con Rejilla y Funciones)".on_red().white().bold());
+    println!(
+        "\n{}",
+        "10. ANIMACIÓN PRO (Con Rejilla y Funciones)"
+            .on_red()
+            .white()
+            .bold()
+    );
     println!("Renderizando... (Ctrl+C para salir)");
     thread::sleep(time::Duration::from_secs(1));
 
@@ -149,10 +210,28 @@ fn main() {
 
     loop {
         chart.canvas.clear();
-        chart.draw_grid(10, 4, Some(Color::TrueColor { r: 60, g: 60, b: 60 }));
+        chart.draw_grid(
+            10,
+            4,
+            Some(Color::TrueColor {
+                r: 60,
+                g: 60,
+                b: 60,
+            }),
+        );
         chart.draw_axes((0.0, 10.0), (-1.5, 1.5), Some(Color::White));
-        chart.plot_function(|x| (x + phase).sin() * (x * 0.5).cos(), 0.0, 10.0, Some(Color::Cyan));
-        chart.plot_function(|x| ((x - phase * 1.5).cos() * 0.5) - 0.5, 0.0, 10.0, Some(Color::Magenta));
+        chart.plot_function(
+            |x: f64| (x + phase).sin() * (x * 0.5).cos(),
+            0.0,
+            10.0,
+            Some(Color::Cyan),
+        );
+        chart.plot_function(
+            |x: f64| ((x - phase * 1.5).cos() * 0.5) - 0.5,
+            0.0,
+            10.0,
+            Some(Color::Magenta),
+        );
         chart.text("Sistema Dual", 0.40, 0.9, Some(Color::Yellow));
 
         let output = chart.canvas.render();

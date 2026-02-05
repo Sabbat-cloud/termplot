@@ -24,9 +24,15 @@ impl BrailleCanvas {
     }
 
     pub fn clear(&mut self) {
-        for row in self.grid.iter_mut() { row.fill(0); }
-        for row in self.color_grid.iter_mut() { row.fill(None); }
-        for row in self.text_layer.iter_mut() { row.fill(None); }
+        for row in self.grid.iter_mut() {
+            row.fill(0);
+        }
+        for row in self.color_grid.iter_mut() {
+            row.fill(None);
+        }
+        for row in self.text_layer.iter_mut() {
+            row.fill(None);
+        }
     }
 
     /// Enciende un píxel virtual. Acepta un color opcional.
@@ -34,14 +40,18 @@ impl BrailleCanvas {
         let pixel_width = self.width * 2;
         let pixel_height = self.height * 4;
 
-        if px >= pixel_width || py >= pixel_height { return; }
+        if px >= pixel_width || py >= pixel_height {
+            return;
+        }
 
         // Coordenadas de la celda de carácter
         let col_char = px / 2;
         // Invertir Y para sistema cartesiano (0,0 abajo-izquierda)
         let row_char = (pixel_height - 1 - py) / 4;
 
-        if row_char >= self.height || col_char >= self.width { return; }
+        if row_char >= self.height || col_char >= self.width {
+            return;
+        }
 
         // Coordenadas dentro del carácter Braille
         let dx = px % 2;
@@ -49,15 +59,19 @@ impl BrailleCanvas {
 
         // Máscaras Unicode Braille estándar
         let mask = match (dx, dy) {
-            (0, 0) => 0x01, (1, 0) => 0x08,
-            (0, 1) => 0x02, (1, 1) => 0x10,
-            (0, 2) => 0x04, (1, 2) => 0x20,
-            (0, 3) => 0x40, (1, 3) => 0x80,
+            (0, 0) => 0x01,
+            (1, 0) => 0x08,
+            (0, 1) => 0x02,
+            (1, 1) => 0x10,
+            (0, 2) => 0x04,
+            (1, 2) => 0x20,
+            (0, 3) => 0x40,
+            (1, 3) => 0x80,
             _ => 0,
         };
 
         self.grid[row_char][col_char] |= mask;
-        
+
         // Si se especifica un color, actualizamos el color de toda la celda
         if let Some(c) = color {
             self.color_grid[row_char][col_char] = Some(c);
@@ -78,10 +92,18 @@ impl BrailleCanvas {
             if x >= 0 && y >= 0 {
                 self.set_pixel(x as usize, y as usize, color);
             }
-            if x == x1 && y == y1 { break; }
+            if x == x1 && y == y1 {
+                break;
+            }
             let e2 = 2 * err;
-            if e2 >= dy { err += dy; x += sx; }
-            if e2 <= dx { err += dx; y += sy; }
+            if e2 >= dy {
+                err += dy;
+                x += sx;
+            }
+            if e2 <= dx {
+                err += dx;
+                y += sy;
+            }
         }
     }
 
@@ -94,12 +116,18 @@ impl BrailleCanvas {
         // Función auxiliar para dibujar los 8 octantes simétricos
         let mut draw_octants = |cx: isize, cy: isize, x: isize, y: isize| {
             let points = [
-                (cx + x, cy + y), (cx - x, cy + y), (cx + x, cy - y), (cx - x, cy - y),
-                (cx + y, cy + x), (cx - y, cy + x), (cx + y, cy - x), (cx - y, cy - x)
+                (cx + x, cy + y),
+                (cx - x, cy + y),
+                (cx + x, cy - y),
+                (cx - x, cy - y),
+                (cx + y, cy + x),
+                (cx - y, cy + x),
+                (cx + y, cy - x),
+                (cx - y, cy - x),
             ];
             for (px, py) in points {
                 if px >= 0 && py >= 0 {
-                     self.set_pixel(px as usize, py as usize, color);
+                    self.set_pixel(px as usize, py as usize, color);
                 }
             }
         };
@@ -129,12 +157,18 @@ impl BrailleCanvas {
         }
     }
 
-    pub fn set_char_vertical(&mut self, char_x: usize, char_y_start: usize, text: &str, color: Option<Color>) {
+    pub fn set_char_vertical(
+        &mut self,
+        char_x: usize,
+        char_y_start: usize,
+        text: &str,
+        color: Option<Color>,
+    ) {
         for (i, ch) in text.chars().enumerate() {
             let y = char_y_start.saturating_sub(i);
             self.set_char(char_x, y, ch, color); // Reutiliza lógica de inversión de Y
-            }   
-    }   
+        }
+    }
     pub fn render(&self) -> String {
         self.render_with_options(true, None)
     }
@@ -155,7 +189,7 @@ impl BrailleCanvas {
     /// Renderiza el canvas combinando forma y color con opciones extendidas
     pub fn render_with_options(&self, show_border: bool, title: Option<&str>) -> String {
         let mut output = String::new();
-        
+
         // Título opcional centrado
         if let Some(t) = title {
             output.push_str(&format!("{:^width$}\n", t, width = self.width + 2));
@@ -167,13 +201,17 @@ impl BrailleCanvas {
         }
 
         for (r_idx, row_masks) in self.grid.iter().enumerate() {
-            if show_border { output.push('│'); }
-            
+            if show_border {
+                output.push('│');
+            }
+
             for (c_idx, &mask) in row_masks.iter().enumerate() {
                 let char_to_print = if let Some(c) = self.text_layer[r_idx][c_idx] {
                     c.to_string()
                 } else {
-                    std::char::from_u32(0x2800 + mask as u32).unwrap_or(' ').to_string()
+                    std::char::from_u32(0x2800 + mask as u32)
+                        .unwrap_or(' ')
+                        .to_string()
                 };
 
                 if let Some(color) = self.color_grid[r_idx][c_idx] {
@@ -182,8 +220,10 @@ impl BrailleCanvas {
                     output.push_str(&char_to_print);
                 }
             }
-            
-            if show_border { output.push('│'); }
+
+            if show_border {
+                output.push('│');
+            }
             output.push('\n');
         }
 
@@ -191,7 +231,7 @@ impl BrailleCanvas {
         if show_border {
             output.push_str(&format!("└{}┘", "─".repeat(self.width)));
         }
-        
+
         output
     }
 }

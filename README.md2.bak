@@ -1,10 +1,5 @@
 # termplot
 
-[![Crates.io](https://img.shields.io/crates/v/termplot.svg)](https://crates.io/crates/termplot)
-[![Docs.rs](https://img.shields.io/docsrs/termplot)](https://docs.rs/termplot)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/Sabbat-cloud/termplot/ci.yml?branch=main)](https://github.com/Sabbat-cloud/termplot/actions)
-
 Gráficos en consola (TUI) usando **Unicode Braille** (2×4 “píxeles” por carácter) y color ANSI.
 Permite dibujar **scatter plots, líneas, barras, polígonos, círculos, rejillas, ejes, texto** y animaciones
 en terminal, sin depender de GUI.
@@ -40,23 +35,41 @@ en terminal, sin depender de GUI.
 
 ## 📦 Instalación
 
-### Crates.io
+### 1) Como dependencia (crates.io)
 
 ```toml
 [dependencies]
 termplot = "0.1"
 ````
 
-### Desde repo (path local)
+### 2) Desde el repo (path local)
 
 ```toml
 [dependencies]
 termplot = { path = "../termplot" }
 ```
 
+> Nota sobre features: actualmente `color` está activado por defecto. El modo “sin color”
+> se refiere al **renderizado** (`render_no_color()`), no a compilar sin la dependencia `colored`.
+> (En roadmap: hacer `colored` opcional de verdad mediante `cfg(feature="color")`.)
+
 ---
 
-## 🚀 Quick start
+## 🧪 Demo / Examples
+
+El proyecto incluye una demo completa en `examples/demo.rs`.
+
+### Ejecutar la demo
+
+```bash
+cargo run --example demo
+```
+
+---
+
+## 🚀 Quick start: Auto-Scaling (v0.8+)
+
+Ahora no necesitas calcular los rangos manualmente. `termplot` lo hace por ti:
 
 ```rust
 use termplot::ChartContext;
@@ -64,14 +77,9 @@ use colored::Color;
 
 fn main() {
     let mut chart = ChartContext::new(60, 15);
+    let points = vec![(0.0, 0.0), (10.0, 50.0), (20.0, 20.0), (40.0, 80.0)];
 
-    let points = vec![
-        (0.0, 0.0),
-        (10.0, 50.0),
-        (20.0, 20.0),
-        (40.0, 80.0),
-    ];
-
+    // Calculamos rango automáticamente con 10% de margen
     let (range_x, range_y) = ChartContext::get_auto_range(&points, 0.1);
 
     chart.draw_axes(range_x, range_y, Some(Color::White));
@@ -83,37 +91,25 @@ fn main() {
 
 ---
 
-## 🧪 Demo / Examples
+## 🧱 Opciones de Renderizado (v0.8+)
 
-El proyecto incluye una demo completa en `examples/demo.rs`.
-
-```bash
-cargo run --example demo
-```
-
-> Tip: si quieres comprobar solo compilación del ejemplo:
->
-> ```bash
-> cargo build --example demo
-> ```
-
----
-
-## 🧱 Renderizado
-
-### Estándar (con bordes)
+### 1) Renderizado estándar (con bordes y color)
 
 ```rust
 println!("{}", chart.canvas.render());
 ```
 
-### Con título y sin bordes (dashboards minimalistas)
+### 2) Renderizado con título y sin bordes
+
+Ideal para dashboards minimalistas.
 
 ```rust
 println!("{}", chart.canvas.render_with_options(false, Some("RENDIMIENTO CPU")));
 ```
 
-### No-Color (plain text / logs)
+### 3) Modo No-Color (Plain Text)
+
+Para cuando necesitas guardar el output en un archivo de texto plano sin códigos ANSI.
 
 ```rust
 println!("{}", chart.canvas.render_no_color());
@@ -123,74 +119,40 @@ println!("{}", chart.canvas.render_no_color());
 
 ## 🧠 Conceptos básicos
 
+### Resolución real (píxeles virtuales)
+
 El canvas se define en **caracteres**: `(width, height)`.
-Cada carácter Braille contiene **2×4 subpíxeles**, así que la resolución real es:
+Pero cada carácter Braille contiene **2×4 subpíxeles**, por lo que la resolución real es:
 
 * `pixel_width = width * 2`
 * `pixel_height = height * 4`
 
 ---
 
-## ⚙️ Features
+## ✅ Ejemplos destacados
 
-Actualmente:
+### 1) Barras con protección de límites
 
-* `render_no_color()` produce salida sin ANSI (ideal para logs).
-* El crate usa `colored` para colorear el render estándar.
+`bar_chart` ajusta automáticamente el ancho de las barras para que:
 
-> Nota: aunque `colored` puede estar definido como `optional` en `Cargo.toml`, el código
-> todavía no está “feature-gated” por completo. En roadmap: soportar `--no-default-features`
-> de forma limpia con `cfg(feature="color")`.
+* cada barra use al menos 1 píxel,
+* no desborde el canvas horizontalmente.
 
----
+### 2) Auto-range con padding configurable
 
-## ✅ Compatibilidad (MSRV)
+`ChartContext::get_auto_range(points, padding)` calcula rangos robustos incluso si:
 
-* Rust **edition 2024** (necesitas una toolchain que soporte 2024).
-* Terminal con buen soporte Unicode recomendado.
-
----
-
-## 🧰 Desarrollo
-
-```bash
-cargo fmt
-cargo clippy
-cargo test
-cargo run --example demo
-```
-
-Generar docs:
-
-```bash
-cargo doc --open
-```
+* hay pocos puntos,
+* el rango es casi cero (evita divisiones por 0),
+* quieres margen visual con `padding`.
 
 ---
 
-## 📦 Publicación (checklist rápida)
+## 🎛️ Consejos de uso
 
-Antes de publicar en crates.io:
-
-1. Asegúrate de tener `LICENSE` (MIT) y `README.md` en el repo.
-2. Revisa `Cargo.toml`:
-
-   * `description`, `license`, `repository`, `homepage` (si aplica)
-   * `keywords`, `categories` (opcional pero recomendable)
-3. Ejecuta:
-
-```bash
-cargo fmt
-cargo clippy
-cargo test
-cargo package
-```
-
-Y publica:
-
-```bash
-cargo publish
-```
+* **Fuente**: usa una monoespaciada con buen soporte Unicode.
+* **Terminal**: si quieres TrueColor, activa una terminal moderna.
+* **Rendimiento**: para animaciones fluidas, mantén el canvas por debajo de `80×40` caracteres.
 
 ---
 
@@ -210,3 +172,4 @@ cargo publish
 
 MIT
 
+````
