@@ -44,14 +44,14 @@ en terminal, sin depender de GUI.
 
 ```toml
 [dependencies]
-termplot = "0.1"
+termplot-rs = "0.1.0"
 ````
 
 ### Desde repo (path local)
 
 ```toml
 [dependencies]
-termplot = { path = "../termplot" }
+termplot-rs = { path = "../termplot" }
 ```
 
 ---
@@ -59,7 +59,7 @@ termplot = { path = "../termplot" }
 ## 🚀 Quick start
 
 ```rust
-use termplot::ChartContext;
+use termplot_rs::ChartContext;
 use colored::Color;
 
 fn main() {

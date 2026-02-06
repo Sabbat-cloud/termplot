@@ -1,6 +1,6 @@
 [package]
 name = "termplot-rs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Una librería para renderizar gráficos en la terminal usando caracteres Braille."
 license = "MIT" # O "MIT OR Apache-2.0"
@@ -12,6 +12,7 @@ categories = ["command-line-interface", "visualization"]
 [dependencies]
 rand = "0.8"
 colored = { version = "2.0", optional = true }
+termplot = "0.1.1"
 
 [features]
 default = ["color"]

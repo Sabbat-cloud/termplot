@@ -2,9 +2,9 @@ use colored::{Color, Colorize};
 use rand::Rng;
 use std::io::{self, Write};
 use std::{thread, time};
-use termplot::ChartContext;
+//use termplot::ChartContext;
 use std::f64::consts::TAU;
-
+use termplot_rs::ChartContext;
 fn main() {
     println!(
         "{}",
