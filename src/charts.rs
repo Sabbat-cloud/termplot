@@ -1,19 +1,6 @@
-// src/charts.rs
 use crate::canvas::BrailleCanvas;
 use colored::Color;
 use std::f64::consts::PI;
-
-/// Opciones de configuración para los gráficos (a futuro)
-#[derive(Clone, Copy)]
-pub struct ChartOptions {
-    pub padding: f64,
-}
-
-impl Default for ChartOptions {
-    fn default() -> Self {
-        Self { padding: 0.1 }
-    }
-}
 
 pub struct ChartContext {
     pub canvas: BrailleCanvas,
@@ -26,7 +13,6 @@ impl ChartContext {
         }
     }
 
-    /// Calcula automáticamente el rango (min, max) de una serie de puntos.
     pub fn get_auto_range(points: &[(f64, f64)], padding: f64) -> ((f64, f64), (f64, f64)) {
         let valid_points: Vec<&(f64, f64)> = points
             .iter()
@@ -168,9 +154,6 @@ impl ChartContext {
         }
     }
 
-    // --- MÉTODOS AÑADIDOS/RESTAURADOS ---
-
-    /// Dibuja un círculo en coordenadas normalizadas (0.0-1.0)
     pub fn draw_circle(&mut self, center: (f64, f64), radius_norm: f64, color: Option<Color>) {
         let w_px = self.canvas.pixel_width() as f64;
         let h_px = self.canvas.pixel_height() as f64;
@@ -183,12 +166,10 @@ impl ChartContext {
         self.canvas.circle(cx_px, cy_px, r_px, color);
     }
 
-    /// Plotea una función matemática y = f(x)
     pub fn plot_function<F>(&mut self, func: F, min_x: f64, max_x: f64, color: Option<Color>)
     where
         F: Fn(f64) -> f64,
     {
-        // Resolución horizontal basada en píxeles
         let steps = self.canvas.pixel_width();
         let mut points = Vec::with_capacity(steps);
 
@@ -217,6 +198,7 @@ impl ChartContext {
         }
     }
 
+    /// Dibuja los ejes calculando "ticks" intermedios de forma automática.
     pub fn draw_axes(&mut self, x_range: (f64, f64), y_range: (f64, f64), color: Option<Color>) {
         let w_px = self.canvas.pixel_width() as isize;
         let h_px = self.canvas.pixel_height() as isize;
@@ -224,26 +206,38 @@ impl ChartContext {
         self.canvas.line(0, 0, 0, h_px - 1, color);
         self.canvas.line(0, 0, w_px - 1, 0, color);
 
-        let y_min = format!("{:.1}", y_range.0);
-        let y_max = format!("{:.1}", y_range.1);
-        let x_min = format!("{:.1}", x_range.0);
-        let x_max = format!("{:.1}", x_range.1);
+        // helper para generar ~4 marcas equidistantes
+        let draw_ticks = |min: f64, max: f64| -> Vec<f64> {
+            let step = (max - min) / 3.0; // 4 marcas incluyendo bordes
+            vec![min, min + step, min + step * 2.0, max]
+        };
 
-        self.text(&y_max, 0.0, 0.9, color);
-        self.text(&y_min, 0.0, 0.1, color);
-        self.text(&x_min, 0.1, 0.0, color);
-        self.text(&x_max, 0.8, 0.0, color);
+        // Y Ticks
+        let y_ticks = draw_ticks(y_range.0, y_range.1);
+        for (i, &val) in y_ticks.iter().enumerate() {
+            let norm_y = i as f64 / (y_ticks.len() - 1) as f64;
+            self.text(&format!("{:.1}", val), 0.0, norm_y, color);
+        }
+
+        // X Ticks
+        let x_ticks = draw_ticks(x_range.0, x_range.1);
+        for (i, &val) in x_ticks.iter().enumerate() {
+            let norm_x = i as f64 / (x_ticks.len() - 1) as f64;
+            // Desplazamos un poco el primero y último para que no se corten
+            let safe_x = norm_x.clamp(0.05, 0.90);
+            self.text(&format!("{:.1}", val), safe_x, 0.0, color);
+        }
     }
 
     pub fn draw_grid(&mut self, divs_x: usize, divs_y: usize, color: Option<Color>) {
          let w_px = self.canvas.pixel_width() as isize;
          let h_px = self.canvas.pixel_height() as isize;
-         
+
          for i in 1..divs_x {
              let x = (i as f64 / divs_x as f64 * (w_px as f64)).round() as isize;
              self.canvas.line(x, 0, x, h_px, color);
          }
-         
+
          for i in 1..divs_y {
              let y = (i as f64 / divs_y as f64 * (h_px as f64)).round() as isize;
              self.canvas.line(0, y, w_px, y, color);

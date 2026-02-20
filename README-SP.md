@@ -1,39 +1,32 @@
 # 📈 termplot-rs
 
-**Motor gráfico de alto rendimiento para terminal (TUI).**
+**Motor de gráficos de terminal de alto rendimiento (TUI).**
 
-`termplot-rs` permite renderizar gráficos matemáticos, visualizaciones 3D y interfaces complejas en la consola utilizando caracteres **Unicode Braille** (matriz de 2×4 puntos por carácter) y colores ANSI.
+`termplot-rs` te permite renderizar gráficos matemáticos, visualizaciones en 3D, juegos e interfaces complejas directamente en la consola utilizando **caracteres Braille Unicode** (matriz de puntos 2×4 por carácter) y colores ANSI.
 
-A diferencia de otras librerías, `termplot-rs` está diseñada para **velocidad crítica**: utiliza buffers de memoria planos (`Vec<u8>`), operaciones a nivel de bit y renderizado *zero-allocation* para alcanzar **miles de FPS** en aplicaciones en tiempo real.
+A diferencia de otras bibliotecas de gráficos para TUI, `termplot-rs` está diseñado para una **velocidad crítica**: utiliza búferes de memoria planos (`Vec<u8>`), operaciones a nivel de bits, recorte matemático (clipping) y un bucle de renderizado con *cero asignaciones* de memoria (zero-allocation) para alcanzar **miles de FPS** en aplicaciones en tiempo real.
 
-> 🚀 **Nuevo en v0.8:** Renderizado optimizado (1600+ FPS en stress tests), sistema de coordenadas dual (Cartesiano/Pantalla) y robustez contra `NaN`/infinitos.
+> 🚀 **Novedades en v0.9.0:** Bucle de renderizado real de cero asignaciones (`render_to`), recorte de líneas (clipping) de Cohen-Sutherland, primitivas rellenas (`rect_filled`, `circle_filled`), borrado de píxeles (`unset_pixel`) y modos de mezcla de color (Color Blending).
 
 ---
 
 ## ✨ Características Principales
 
-* **Alta Resolución:** 8 sub-píxeles por carácter (Braille 2x4). Una terminal de 100x50 ofrece un canvas de 200x200 píxeles reales.
+* **Alta Resolución:** 8 sub-píxeles por carácter (Braille 2x4). Una terminal de 100x50 produce un lienzo efectivo de 200x200 píxeles.
 * **Rendimiento Extremo:**
-* Uso de **buffers planos** para máxima localidad de caché.
-* Minimización de asignaciones de memoria en el bucle de renderizado.
-* Salida ANSI optimizada (no repite códigos de color redundantes).
-
-
-* **Robusto:** Manejo seguro de datos (ignora `NaN`, evita divisiones por cero, clamps automáticos).
-* **Primitivas Gráficas:**
-* Líneas (Bresenham), Círculos, Polígonos.
-* Texto sobreimpreso (Text Layer).
-
-
-* **Gráficos Listos para Usar:**
-* `scatter()` (Nube de puntos).
-* `line_chart()` (Series temporales).
-* `bar_chart()` (Barras con auto-ancho).
-* `pie_chart()` (Gráfico de pastel/radar).
-* `plot_function()` (Ploteo directo de funciones matemáticas `y = f(x)`).
-
-
-* **Auto-Range:** Cálculo automático de escalas y ejes basado en tus datos.
+  * **Búferes planos** para máxima localidad en la caché de la CPU.
+  * **Bucle de Cero Asignaciones (True Zero-Allocation):** Renderiza directamente a un `std::fmt::Write` o `stdout.lock()` sin crear ni un solo `String` por fotograma.
+  * **Recorte Cohen-Sutherland:** Descarta matemáticamente la geometría fuera de la pantalla antes de la rasterización, ahorrando ciclos masivos de CPU al hacer zoom o dibujar fuera de los límites. 
+* **Control Avanzado de Píxeles y Color:**
+  * Borra o alterna puntos Braille individuales (`unset_pixel`, `toggle_pixel`).
+  * **Modos de Mezcla (Color Blending):** Controla cómo interactúan los sub-píxeles que comparten la misma celda de la terminal (`Overwrite` vs `KeepFirst`).
+* **Primitivas de Dibujo:**
+  * Líneas (Bresenham), Círculos, Polígonos.
+  * **Formas Rellenas:** `rect_filled` y `circle_filled`.
+  * Capa de Texto (superpuesta).
+* **Gráficos listos para usar:**
+  * `scatter()`, `line_chart()`, `bar_chart()`, `pie_chart()`, `plot_function()`.
+* **Rango Automático y Ejes Inteligentes:** Escalado automático de ejes y generación de marcas (ticks) basados en tu conjunto de datos.
 
 ---
 
@@ -43,72 +36,110 @@ Añade esto a tu `Cargo.toml`:
 
 ```toml
 [dependencies]
-termplot-rs = "0.1.1" 
-rand = "0.8" # Opcional, para generar datos de prueba
+termplot-rs = "0.9.0"
 colored = "2.0"
+# Opcional, para generar datos de prueba
+rand = "0.8"   
 
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Inicio Rápido
 
 ```rust
-use termplot_rs::{ChartContext, ChartOptions};
+use termplot_rs::ChartContext;
 use colored::Color;
 
 fn main() {
-    // 1. Crear contexto (Ancho, Alto en caracteres)
+    // 1. Crear el contexto (Ancho, Alto en caracteres)
     let mut chart = ChartContext::new(60, 15);
 
-    // 2. Generar datos (ej. función Seno)
+    // 2. Generar datos (ej. Onda senoidal)
     let points: Vec<(f64, f64)> = (0..100)
         .map(|x| (x as f64 / 10.0, (x as f64 / 5.0).sin()))
         .collect();
 
     // 3. Dibujar
-    // Auto-range calcula los límites automáticamente
+    // Auto-range calcula el min/max automáticamente
     let (range_x, range_y) = ChartContext::get_auto_range(&points, 0.1);
-    
+
     chart.draw_axes(range_x, range_y, Some(Color::White));
     chart.line_chart(&points, Some(Color::Cyan));
     chart.text("Onda Senoidal", 0.5, 0.9, Some(Color::Yellow));
 
-    // 4. Renderizar a String e imprimir
+    // 4. Renderizar e imprimir (Método estándar)
     println!("{}", chart.canvas.render());
 }
 
 ```
 
+### 🏎️ Bucle de Renderizado de Cero Asignaciones (Para Juegos/Animaciones)
+
+Si estás construyendo una app en tiempo real a 60 FPS, evita usar `render()` (que crea un nuevo `String` en cada frame) y usa `render_to()`:
+
+```rust
+use std::fmt::Write;
+
+// Dentro de tu bucle de juego:
+let mut buffer = String::with_capacity(8000); 
+chart.canvas.render_to(&mut buffer, true, Some("UI a 60 FPS"))?;
+print!("{}", buffer);
+buffer.clear(); // ¡Reutiliza la memoria!
+
+```
+
 ---
 
-## 📐 Sistema de Coordenadas
+## 📐 Sistema de Coordenadas y API de Píxeles
 
-Para evitar confusiones matemáticas, `termplot-rs` ofrece dos modos de dibujar píxeles:
+Para evitar confusiones matemáticas, `termplot-rs` ofrece dos modos de coordenadas y múltiples operadores de píxeles:
 
-| Método | Origen (0,0) | Dirección Y | Uso Recomendado |
+| Modo de Coordenadas | Origen (0,0) | Dirección Y | Ideal Para |
 | --- | --- | --- | --- |
-| `set_pixel(x, y)` | **Abajo-Izquierda** | Crece hacia **Arriba** | Gráficos matemáticos, funciones, charts. |
-| `set_pixel_screen(x, y)` | **Arriba-Izquierda** | Crece hacia **Abajo** | UI, Imágenes, Renderizado 3D proyectado, Video. |
+| **Cartesian (Cartesiano)** | **Abajo-Izquierda** | Crece hacia **Arriba** | Gráficos matemáticos, funciones, charts. |
+| **Screen (Pantalla)** | **Arriba-Izquierda** | Crece hacia **Abajo** | UI, Juegos, Sprites, Proyecciones 3D. |
 
-> **Nota:** Las funciones de alto nivel (`scatter`, `line_chart`) usan internamente coordenadas matemáticas cartesianas.
+**Métodos de Manipulación de Píxeles:**
+
+* `set_pixel / set_pixel_screen`: ENCIENDE un punto.
+* `unset_pixel / unset_pixel_screen`: APAGA un punto (Borra).
+* `toggle_pixel_screen`: Invierte el estado actual de un punto.
 
 ---
 
 ## 🧪 Ejemplos y Demos
 
-El repositorio incluye ejemplos avanzados para demostrar la potencia de la librería.
+El repositorio incluye ejemplos avanzados para mostrar el poder de la biblioteca.
 
-### 1. Stress Test "Plasma" (+1000 FPS)
+### 1. Primitivas y Modos de Mezcla (NUEVO)
 
-Calcula trigonometría compleja por píxel y partículas en tiempo real. **Ejecutar en modo release para ver la velocidad real.**
+Un salvapantallas interactivo que muestra el recorte (clipping) de Cohen-Sutherland, formas rellenas, borrado de píxeles (agujeros dinámicos) y cambio de modos de mezcla de color en tiempo real.
 
 ```bash
-cargo run --release --example plasma
+cargo run --release --example primitives_demo
 
 ```
 
-### 2. Fractales Interactivos
+### 2. Sistema Solar Kepler 3D
+
+Simulación física completa del Sistema Solar utilizando mecánica orbital real, rotaciones 3D y un Z-Buffer por software personalizado.
+
+```bash
+cargo run --release --example solarsystem_kepler
+
+```
+
+### 3. Motor de Sprites
+
+Una demo de estilo Space Invaders retro que muestra cómo cargar y renderizar arte ASCII personalizado como sprites Braille ultrarrápidos.
+
+```bash
+cargo run --release --example sprite_demo
+
+```
+
+### 4. Fractales Interactivos
 
 Explorador de Mandelbrot y Julia con Zoom infinito y rotación.
 
@@ -117,18 +148,9 @@ cargo run --release --example fractalmove
 
 ```
 
-### 3. Cubo 3D
+### 5. Galería de Gráficos
 
-Renderizado de wireframe 3D con proyección y rotación.
-
-```bash
-cargo run --example cube2
-
-```
-
-### 4. Galería de Charts
-
-Muestra todos los tipos de gráficos estáticos disponibles.
+Muestra todos los tipos de gráficos estáticos disponibles (Barras, Dispersión, Pastel, Auto-Ticks).
 
 ```bash
 cargo run --example demo
@@ -139,28 +161,32 @@ cargo run --example demo
 
 ## ⚡ Rendimiento
 
-`termplot-rs` está optimizado para evitar "allocations" innecesarias.
-En un benchmark con un canvas de **236x104 sub-píxeles** (relleno completo con ruido Perlin y partículas), en una máquina moderna:
+`termplot-rs` está rigurosamente optimizado.
+En un benchmark con un lienzo de **236x104 sub-píxeles** (llenado completo con ruido trigonométrico y partículas), en una máquina moderna:
 
-* **Debug Mode:** ~60 FPS
-* **Release Mode:** ~1600+ FPS
+* **Modo Debug:** ~60 FPS
+* **Modo Release:** ~1600+ FPS
 
-Esto lo hace viable para visualización de audio, monitoreo de servidores en alta frecuencia o simulaciones físicas ligeras directamente en terminal.
+Esto lo hace viable para visualización de audio, monitorización de servidores de alta frecuencia, juegos de terminal retro, o simulaciones físicas ligeras.
 
 ---
 
-## 🗺️ Roadmap
+## 🗺️ Hoja de Ruta (Roadmap)
 
-* [x] Optimización de memoria (Buffers planos `Vec<u8>`).
+* [x] Optimización de memoria (Búferes `Vec<u8>` planos).
 * [x] APIs de coordenadas explícitas (`screen` vs `cartesian`).
-* [x] Robustez en `bar_chart` y `auto_range` (fix division by zero).
-* [x] Métodos `plot_function` y `draw_circle`.
-* [ ] Soporte para escalas logarítmicas.
-* [ ] Leyendas automáticas (Legend Box).
-* [ ] Soporte opcional para `serde` en estructuras de configuración.
+* [x] Recorte matemático de líneas (Cohen-Sutherland).
+* [x] Renderizado real con cero asignaciones (`render_to`).
+* [x] Primitivas Rellenas (`rect_filled`, `circle_filled`) y Borradores.
+* [x] Políticas de Mezcla de Color (`Overwrite`, `KeepFirst`).
+* [ ] Soporte para escala logarítmica.
+* [ ] Caja de Leyenda automática.
+* [ ] Renderizadores de terminal conectables basados en *Traits* (`CellRenderer` para HalfBlocks/Quadrants).
 
 ---
 
 ## 📄 Licencia
 
-Este proyecto está bajo la licencia **MIT**. Siéntete libre de usarlo en tus herramientas CLI, dashboards o experimentos gráficos.
+Este proyecto está licenciado bajo la licencia **MIT**. Siéntete libre de usarlo en tus herramientas CLI, paneles de control (dashboards) o experimentos gráficos.
+
+```

@@ -1,4 +1,4 @@
-use colored::Color; // Eliminado el Colorize que no se usaba
+use colored::Color; 
 use crossterm::{
     cursor,
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind},
@@ -400,7 +400,7 @@ fn main() -> io::Result<()> {
 
         let camera_target_offset = if let Some(id) = follow_body { bodies[id].pos } else { Vec3::new(0.0, 0.0, 0.0) };
 
-        let mut to_screen = |v_world: Vec3| -> Option<(isize, isize, f64)> {
+        let to_screen = |v_world: Vec3| -> Option<(isize, isize, f64)> {
             let mut v_cam = v_world.sub(camera_target_offset).sub(cam_pos);
             v_cam = rotate_y(v_cam, -cam_yaw);
             v_cam = rotate_x(v_cam, -cam_pitch);

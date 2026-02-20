@@ -2,6 +2,5 @@ pub mod canvas;
 pub mod charts;
 pub mod prelude;
 
-// Reexports cómodos (opcional)
-pub use canvas::BrailleCanvas;
-pub use charts::{ChartContext, ChartOptions};
+pub use canvas::{BrailleCanvas, ColorBlend};
+pub use charts::ChartContext;
