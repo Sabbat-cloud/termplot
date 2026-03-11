@@ -26,6 +26,7 @@ Unlike other TUI plotting libraries, `termplot-rs` is designed for **critical sp
   * Text Layer (overlay).
 * **Ready-to-use Charts:**
   * `scatter()`, `line_chart()`, `bar_chart()`, `pie_chart()`, `plot_function()`.
+  * Per-axis linear or `log10` scaling via `AxisScale`.
 * **Auto-Range & Smart Axes:** Automatic axis scaling and tick generation based on your dataset.
 
 ---
@@ -72,6 +73,28 @@ fn main() {
     println!("{}", chart.canvas.render());
 }
 
+```
+
+### Logarithmic Axes
+
+```rust
+use colored::Color;
+use termplot_rs::{AxisScale, ChartContext};
+
+let mut chart = ChartContext::new(60, 15);
+chart.set_scales(AxisScale::Linear, AxisScale::Log10);
+
+let points = vec![(1.0, 1.0), (2.0, 10.0), (3.0, 100.0), (4.0, 1000.0)];
+let (range_x, range_y) = ChartContext::get_auto_range_scaled(
+    &points,
+    0.05,
+    AxisScale::Linear,
+    AxisScale::Log10,
+);
+
+chart.draw_axes(range_x, range_y, Some(Color::White));
+chart.line_chart(&points, Some(Color::Cyan));
+println!("{}", chart.canvas.render());
 ```
 
 ### 🏎️ Zero-Allocation Render Loop (For Games/Animations)
@@ -179,7 +202,7 @@ This makes it viable for audio visualization, high-frequency server monitoring, 
 * [x] True zero-allocation rendering (`render_to`).
 * [x] Filled Primitives (`rect_filled`, `circle_filled`) & Erasers.
 * [x] Color Blending Policies (`Overwrite`, `KeepFirst`).
-* [ ] Logarithmic scaling support.
+* [x] Logarithmic scaling support.
 * [ ] Automatic Legend Box.
 * [ ] Trait-based pluggable terminal renderers (`CellRenderer` for HalfBlocks/Quadrants).
 

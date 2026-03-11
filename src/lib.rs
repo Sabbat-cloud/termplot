@@ -3,4 +3,4 @@ pub mod charts;
 pub mod prelude;
 
 pub use canvas::{BrailleCanvas, ColorBlend};
-pub use charts::ChartContext;
+pub use charts::{AxisScale, ChartContext};
