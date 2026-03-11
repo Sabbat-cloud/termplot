@@ -31,8 +31,6 @@ impl Vec3 {
 
 fn rotate_x(v: Vec3, a: f64) -> Vec3 { let (s, c) = a.sin_cos(); Vec3::new(v.x, v.y * c - v.z * s, v.y * s + v.z * c) }
 fn rotate_y(v: Vec3, a: f64) -> Vec3 { let (s, c) = a.sin_cos(); Vec3::new(v.x * c - v.z * s, v.y, v.x * s + v.z * c) }
-fn rotate_z(v: Vec3, a: f64) -> Vec3 { let (s, c) = a.sin_cos(); Vec3::new(v.x * c - v.y * s, v.x * s + v.y * c, v.z) }
-
 // ============================================================================
 // MOTOR GRÁFICO (Z-BUFFER)
 // ============================================================================
@@ -196,7 +194,7 @@ fn main() -> io::Result<()> {
     let mut frames = 0;
     let mut last_fps_time = Instant::now();
     let mut current_fps = 0;
-    let mut drawn_vertices = 0;
+    let mut _drawn_vertices = 0;
     let mut is_dragging = false;
     let mut last_mouse_pos: Option<(u16, u16)> = None;
 
@@ -330,7 +328,7 @@ fn main() -> io::Result<()> {
 
         chart_ref.canvas.clear();
         zb.clear();
-        drawn_vertices = 0;
+        _drawn_vertices = 0;
 
         // --- FÍSICA N-BODY CON VELOCITY VERLET (LEAPFROG) ---
         if time_scale > 0.0 {
@@ -359,11 +357,6 @@ fn main() -> io::Result<()> {
                         let r2 = dist_sq + eps2;
                         let inv_r = 1.0 / r2.sqrt();
                         let inv_r3 = inv_r * inv_r * inv_r;
-                        // Plummer Softening: Evita la singularidad (división por cero) si colisionan
-                        let softening = 2.0; 
-                        let eff_dist = (dist_sq + softening).sqrt(); 
-                        
-                        let force_mag = G * bodies[i].mass * bodies[j].mass / (dist_sq + softening);
                         let force_vec = d.mul(G * bodies[i].mass * bodies[j].mass * inv_r3);
                         bodies[i].force = bodies[i].force.add(force_vec);
                         bodies[j].force = bodies[j].force.sub(force_vec);
@@ -424,7 +417,7 @@ fn main() -> io::Result<()> {
             for p0 in sphere_pts.iter() {
                 let (v_world, normal) = body.get_vertex_data(*p0);
                 if let Some((sx, sy, z)) = to_screen(v_world) {
-                    drawn_vertices += 1;
+                    _drawn_vertices += 1;
                     let final_color;
                     if body.is_star {
                         final_color = body.color;

@@ -112,8 +112,11 @@ struct CelestialBody {
     cw_rate: f64,       // Frecuencia del Bamboleo de Chandler.
 
     // --- ANILLOS ---
+    #[allow(dead_code)]
     ring_inner: f64,    // Radio interior del anillo (0 si no tiene)
+    #[allow(dead_code)]
     ring_outer: f64,    // Radio exterior del anillo
+    #[allow(dead_code)]
     ring_color: Color,
     is_star: bool, // Determina si emite luz (sin sombra)
 }
@@ -176,6 +179,7 @@ impl CelestialBody {
     }
     
     /// Igual que get_vertex_pos, pero para calcular las partículas de los anillos.
+    #[allow(dead_code)]
     fn get_ring_pos(&self, local_v: Vec3, t: f64, absolute_orbit_pos: Vec3) -> Vec3 {
         let mut v = local_v;
         // Los anillos no rotan a la velocidad del planeta, pero sí comparten su inclinación y precesión.

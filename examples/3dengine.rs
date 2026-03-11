@@ -386,7 +386,7 @@ fn main() -> io::Result<()> {
         let pos_tri = Vec3::new(0.0, 0.1, z_push - 0.2);
 
         // World -> camera -> screen
-        let mut to_screen = |v_world: Vec3| -> Option<(isize, isize, f64)> {
+        let to_screen = |v_world: Vec3| -> Option<(isize, isize, f64)> {
             let v_cam = v_world.sub(cam);
             project_to_screen(v_cam, cw, ch, scale)
         };
@@ -544,4 +544,3 @@ fn main() -> io::Result<()> {
     terminal::disable_raw_mode()?;
     Ok(())
 }
-
