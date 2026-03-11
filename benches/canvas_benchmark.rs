@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use termplot_rs::canvas::{BrailleCanvas, ColorBlend};
 use colored::Color;
+use termplot_rs::canvas::BrailleCanvas;
 
 fn draw_primitives_bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("Dibujo de Primitivas");

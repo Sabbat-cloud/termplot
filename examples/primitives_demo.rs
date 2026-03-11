@@ -5,7 +5,6 @@ use crossterm::{
     execute,
     terminal::{self, ClearType},
 };
-use std::fmt::Write as FmtWrite; // Para render_to
 use std::io::{self, Write as IoWrite};
 use std::time::{Duration, Instant};
 use termplot_rs::{canvas::ColorBlend, ChartContext};
