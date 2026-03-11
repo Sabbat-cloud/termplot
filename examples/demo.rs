@@ -16,7 +16,7 @@ fn main() {
 
     // 1. Gráfico de Barras Coloreado
     println!("{}", "1. Color bars".yellow());
-    let mut chart = ChartContext::new(60, 10);
+    let mut chart = ChartContext::new(60, 15);
     let data_bars = vec![
         (30.0, Some(Color::Red)),
         (55.0, Some(Color::Green)),
@@ -65,7 +65,7 @@ fn main() {
 
     // 5. Espiral Logarítmica (Actualizada v0.8 con Auto-Range)
     println!("\n{}", "5. Logarithmic Spiral (Auto-Scaled)".yellow());
-    let mut chart = ChartContext::new(60, 20);
+    let mut chart = ChartContext::new(60, 15);
     let mut spiral_points = Vec::new();
     
     // CORRECCIÓN: Tipado explícito para que .sin()/.cos() sepan que es f64
@@ -143,7 +143,7 @@ fn main() {
 
     // --- 8. NUEVAS OPCIONES v0.8+ ---
     println!("\n{}", "8. Options v0.8+ (No color / Títles)".yellow());
-    let mut v8_chart = ChartContext::new(40, 10);
+    let mut v8_chart = ChartContext::new(60, 15);
     v8_chart.draw_grid(5, 2, Some(Color::White));
     v8_chart.plot_function(|x: f64| x.cos(), 0.0, TAU, Some(Color::Green));
     v8_chart.text("Cosine", 0.4, 0.8, None);

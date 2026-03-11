@@ -4,16 +4,27 @@ use std::f64::consts::PI;
 
 pub struct ChartContext {
     pub canvas: BrailleCanvas,
+    background_mask: Vec<u8>,
 }
 
 impl ChartContext {
     pub fn new(width: usize, height: usize) -> Self {
+        let canvas = BrailleCanvas::new(width, height);
         Self {
-            canvas: BrailleCanvas::new(width, height),
+            background_mask: vec![0; width * height],
+            canvas,
         }
     }
 
     pub fn get_auto_range(points: &[(f64, f64)], padding: f64) -> ((f64, f64), (f64, f64)) {
+        Self::get_auto_range_with_padding(points, padding, padding)
+    }
+
+    fn get_auto_range_with_padding(
+        points: &[(f64, f64)],
+        x_padding: f64,
+        y_padding: f64,
+    ) -> ((f64, f64), (f64, f64)) {
         let valid_points: Vec<&(f64, f64)> = points
             .iter()
             .filter(|(x, y)| x.is_finite() && y.is_finite())
@@ -37,55 +48,133 @@ impl ChartContext {
         let ry = if (max_y - min_y).abs() < 1e-9 { 1.0 } else { max_y - min_y };
 
         (
-            (min_x - rx * padding, max_x + rx * padding),
-            (min_y - ry * padding, max_y + ry * padding),
+            (min_x - rx * x_padding, max_x + rx * x_padding),
+            (min_y - ry * y_padding, max_y + ry * y_padding),
         )
     }
 
-    fn map_coords(&self, x: f64, y: f64, x_range: (f64, f64), y_range: (f64, f64)) -> (isize, isize) {
+    fn map_coords_for_size(
+        width_px: usize,
+        height_px: usize,
+        left_inset_px: usize,
+        bottom_inset_px: usize,
+        x: f64,
+        y: f64,
+        x_range: (f64, f64),
+        y_range: (f64, f64),
+    ) -> (isize, isize) {
         let (min_x, max_x) = x_range;
         let (min_y, max_y) = y_range;
-        let width = self.canvas.pixel_width() as f64;
-        let height = self.canvas.pixel_height() as f64;
         let range_x = (max_x - min_x).max(1e-9);
         let range_y = (max_y - min_y).max(1e-9);
+        let drawable_width = (width_px.saturating_sub(1 + left_inset_px)).max(1) as f64;
+        let drawable_height = (height_px.saturating_sub(1 + bottom_inset_px)).max(1) as f64;
 
-        let px = ((x - min_x) / range_x * (width - 1.0)).round();
-        let py = ((y - min_y) / range_y * (height - 1.0)).round();
+        let px = left_inset_px as f64 + ((x - min_x) / range_x * drawable_width).round();
+        let py = bottom_inset_px as f64 + ((y - min_y) / range_y * drawable_height).round();
 
         (px as isize, py as isize)
     }
 
+    fn draw_foreground_overlay<F>(&mut self, draw: F)
+    where
+        F: FnOnce(&mut BrailleCanvas),
+    {
+        let mut overlay = BrailleCanvas::new(self.canvas.width, self.canvas.height);
+        overlay.blend_mode = self.canvas.blend_mode;
+        draw(&mut overlay);
+        self.canvas
+            .overlay_without_background(&overlay, &self.background_mask);
+    }
+
+    fn draw_background_overlay<F>(&mut self, draw: F)
+    where
+        F: FnOnce(&mut BrailleCanvas),
+    {
+        let mut overlay = BrailleCanvas::new(self.canvas.width, self.canvas.height);
+        overlay.blend_mode = self.canvas.blend_mode;
+        draw(&mut overlay);
+        self.canvas.merge(&overlay);
+        for (mask, cell) in self.background_mask.iter_mut().zip(overlay.cell_masks()) {
+            *mask |= *cell;
+        }
+    }
+
     // --- GRÁFICOS ---
+
+    fn line_chart_with_ranges(
+        &mut self,
+        points: &[(f64, f64)],
+        x_range: (f64, f64),
+        y_range: (f64, f64),
+        color: Option<Color>,
+    ) {
+        let w_px = self.canvas.pixel_width();
+        let h_px = self.canvas.pixel_height();
+        let (left_inset_px, bottom_inset_px) = self.canvas.plot_insets();
+
+        self.draw_foreground_overlay(|overlay| {
+            for window in points.windows(2) {
+                let (x0, y0) = window[0];
+                let (x1, y1) = window[1];
+                if !x0.is_finite() || !y0.is_finite() || !x1.is_finite() || !y1.is_finite() { continue; }
+
+                let p0 = Self::map_coords_for_size(
+                    w_px,
+                    h_px,
+                    left_inset_px,
+                    bottom_inset_px,
+                    x0,
+                    y0,
+                    x_range,
+                    y_range,
+                );
+                let p1 = Self::map_coords_for_size(
+                    w_px,
+                    h_px,
+                    left_inset_px,
+                    bottom_inset_px,
+                    x1,
+                    y1,
+                    x_range,
+                    y_range,
+                );
+                overlay.line(p0.0, p0.1, p1.0, p1.1, color);
+            }
+        });
+    }
 
     pub fn scatter(&mut self, points: &[(f64, f64)], color: Option<Color>) {
         if points.is_empty() { return; }
         let (x_range, y_range) = Self::get_auto_range(points, 0.05);
         let w_px = self.canvas.pixel_width();
         let h_px = self.canvas.pixel_height();
+        let (left_inset_px, bottom_inset_px) = self.canvas.plot_insets();
 
-        for &(x, y) in points {
-            if !x.is_finite() || !y.is_finite() { continue; }
-            let (px, py) = self.map_coords(x, y, x_range, y_range);
-            if px >= 0 && py >= 0 && (px as usize) < w_px && (py as usize) < h_px {
-                self.canvas.set_pixel(px as usize, py as usize, color);
+        self.draw_foreground_overlay(|overlay| {
+            for &(x, y) in points {
+                if !x.is_finite() || !y.is_finite() { continue; }
+                let (px, py) = Self::map_coords_for_size(
+                    w_px,
+                    h_px,
+                    left_inset_px,
+                    bottom_inset_px,
+                    x,
+                    y,
+                    x_range,
+                    y_range,
+                );
+                if px >= 0 && py >= 0 && (px as usize) < w_px && (py as usize) < h_px {
+                    overlay.set_pixel(px as usize, py as usize, color);
+                }
             }
-        }
+        });
     }
 
     pub fn line_chart(&mut self, points: &[(f64, f64)], color: Option<Color>) {
         if points.len() < 2 { return; }
         let (x_range, y_range) = Self::get_auto_range(points, 0.05);
-
-        for window in points.windows(2) {
-            let (x0, y0) = window[0];
-            let (x1, y1) = window[1];
-            if !x0.is_finite() || !y0.is_finite() || !x1.is_finite() || !y1.is_finite() { continue; }
-
-            let p0 = self.map_coords(x0, y0, x_range, y_range);
-            let p1 = self.map_coords(x1, y1, x_range, y_range);
-            self.canvas.line(p0.0, p0.1, p1.0, p1.1, color);
-        }
+        self.line_chart_with_ranges(points, x_range, y_range, color);
     }
 
     pub fn bar_chart(&mut self, values: &[(f64, Option<Color>)]) {
@@ -116,16 +205,49 @@ impl ChartContext {
 
     pub fn polygon(&mut self, vertices: &[(f64, f64)], color: Option<Color>) {
         if vertices.len() < 2 { return; }
-        let (x_range, y_range) = Self::get_auto_range(vertices, 0.05);
+        let normalized_polygon = vertices.iter().all(|&(x, y)| {
+            x.is_finite() && y.is_finite() && (0.0..=1.0).contains(&x) && (0.0..=1.0).contains(&y)
+        });
+        let (x_range, y_range) = if normalized_polygon {
+            ((0.0, 1.0), (0.0, 1.0))
+        } else {
+            Self::get_auto_range(vertices, 0.05)
+        };
+        let w_px = self.canvas.pixel_width();
+        let h_px = self.canvas.pixel_height();
+        let (left_inset_px, bottom_inset_px) = self.canvas.plot_insets();
 
-        for i in 0..vertices.len() {
-            let (x0, y0) = vertices[i];
-            let (x1, y1) = vertices[(i + 1) % vertices.len()];
-            if !x0.is_finite() || !y0.is_finite() || !x1.is_finite() || !y1.is_finite() { continue; }
-            let p0 = self.map_coords(x0, y0, x_range, y_range);
-            let p1 = self.map_coords(x1, y1, x_range, y_range);
-            self.canvas.line(p0.0, p0.1, p1.0, p1.1, color);
-        }
+        let draw_polygon = |overlay: &mut BrailleCanvas| {
+            for i in 0..vertices.len() {
+                let (x0, y0) = vertices[i];
+                let (x1, y1) = vertices[(i + 1) % vertices.len()];
+                if !x0.is_finite() || !y0.is_finite() || !x1.is_finite() || !y1.is_finite() {
+                    continue;
+                }
+                let p0 = Self::map_coords_for_size(
+                    w_px,
+                    h_px,
+                    left_inset_px,
+                    bottom_inset_px,
+                    x0,
+                    y0,
+                    x_range,
+                    y_range,
+                );
+                let p1 = Self::map_coords_for_size(
+                    w_px,
+                    h_px,
+                    left_inset_px,
+                    bottom_inset_px,
+                    x1,
+                    y1,
+                    x_range,
+                    y_range,
+                );
+                overlay.line(p0.0, p0.1, p1.0, p1.1, color);
+            }
+        };
+        self.draw_foreground_overlay(draw_polygon);
     }
 
     pub fn pie_chart(&mut self, slices: &[(f64, Option<Color>)]) {
@@ -138,7 +260,7 @@ impl ChartContext {
         let h_px = self.canvas.pixel_height() as isize;
         let cx = w_px / 2;
         let cy = h_px / 2;
-        let radius = (w_px.min(h_px) as f64 / 2.0 * 0.95) as isize;
+        let radius = ((w_px.min(h_px).saturating_sub(1)) / 2).max(1);
         let mut current_angle = 0.0;
 
         for (value, color) in slices {
@@ -149,7 +271,9 @@ impl ChartContext {
             let end_x = cx + (radius as f64 * end_angle.cos()) as isize;
             let end_y = cy + (radius as f64 * end_angle.sin()) as isize;
 
-            self.canvas.line(cx, cy, end_x, end_y, *color);
+            self.draw_foreground_overlay(|overlay| {
+                overlay.line(cx, cy, end_x, end_y, *color);
+            });
             current_angle = end_angle;
         }
     }
@@ -163,14 +287,16 @@ impl ChartContext {
         let cx_px = (center.0 * (w_px - 1.0)) as isize;
         let cy_px = (center.1 * (h_px - 1.0)) as isize;
 
-        self.canvas.circle(cx_px, cy_px, r_px, color);
+        self.draw_foreground_overlay(|overlay| {
+            overlay.circle(cx_px, cy_px, r_px, color);
+        });
     }
 
     pub fn plot_function<F>(&mut self, func: F, min_x: f64, max_x: f64, color: Option<Color>)
     where
         F: Fn(f64) -> f64,
     {
-        let steps = self.canvas.pixel_width();
+        let steps = self.canvas.pixel_width().saturating_sub(1).max(1);
         let mut points = Vec::with_capacity(steps);
 
         for i in 0..=steps {
@@ -181,7 +307,9 @@ impl ChartContext {
                 points.push((x, y));
             }
         }
-        self.line_chart(&points, color);
+        if points.len() < 2 { return; }
+        let (_, y_range) = Self::get_auto_range(&points, 0.05);
+        self.line_chart_with_ranges(&points, (min_x, max_x), y_range, color);
     }
 
     // --- UTILIDADES ---
@@ -202,9 +330,25 @@ impl ChartContext {
     pub fn draw_axes(&mut self, x_range: (f64, f64), y_range: (f64, f64), color: Option<Color>) {
         let w_px = self.canvas.pixel_width() as isize;
         let h_px = self.canvas.pixel_height() as isize;
+        self.canvas.set_plot_insets(1, 1);
+        let (left_inset_px, bottom_inset_px) = self.canvas.plot_insets();
 
-        self.canvas.line(0, 0, 0, h_px - 1, color);
-        self.canvas.line(0, 0, w_px - 1, 0, color);
+        self.draw_background_overlay(|overlay| {
+            overlay.line(
+                left_inset_px as isize,
+                bottom_inset_px as isize,
+                left_inset_px as isize,
+                h_px - 1,
+                color,
+            );
+            overlay.line(
+                left_inset_px as isize,
+                bottom_inset_px as isize,
+                w_px - 1,
+                bottom_inset_px as isize,
+                color,
+            );
+        });
 
         // helper para generar ~4 marcas equidistantes
         let draw_ticks = |min: f64, max: f64| -> Vec<f64> {
@@ -233,14 +377,74 @@ impl ChartContext {
          let w_px = self.canvas.pixel_width() as isize;
          let h_px = self.canvas.pixel_height() as isize;
 
-         for i in 1..divs_x {
-             let x = (i as f64 / divs_x as f64 * (w_px as f64)).round() as isize;
-             self.canvas.line(x, 0, x, h_px, color);
-         }
+         self.draw_background_overlay(|overlay| {
+             for i in 1..divs_x {
+                 let x = (i as f64 / divs_x as f64 * (w_px as f64)).round() as isize;
+                 overlay.line(x, 0, x, h_px, color);
+             }
 
-         for i in 1..divs_y {
-             let y = (i as f64 / divs_y as f64 * (h_px as f64)).round() as isize;
-             self.canvas.line(0, y, w_px, y, color);
-         }
+             for i in 1..divs_y {
+                 let y = (i as f64 / divs_y as f64 * (h_px as f64)).round() as isize;
+                 overlay.line(0, y, w_px, y, color);
+             }
+         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ChartContext;
+
+    #[test]
+    fn plot_function_renders_over_grid_without_cell_artifacts() {
+        let mut chart = ChartContext::new(12, 6);
+        chart.draw_grid(4, 2, None);
+        chart.draw_axes((0.0, 6.0), (-1.0, 1.0), None);
+        chart.plot_function(|x: f64| x.sin(), 0.0, 6.0, None);
+
+        assert_eq!(
+            chart.canvas.render_no_color(),
+            concat!(
+                "⡇⠀⢠⠒⠢⡀⡇⠀⠀⡇⠀⠀\n",
+                "⡇⢠⠃⡇⠀⠱⡀⠀⠀⡇⠀⠀\n",
+                "⢠⠃⣀⣇⣀⣀⡇⣀⣀⣇⣀⣀\n",
+                "⡇⠀⠀⡇⠀⠀⠸⡀⠀⡇⠀⢠\n",
+                "⡇⠀⠀⡇⠀⠀⡇⠱⡀⡇⢠⠃\n",
+                "⣇⣀⣀⣇⣀⣀⣇⣀⠑⠒⠁⣀\n",
+            ),
+        );
+    }
+
+    #[test]
+    fn multiple_foreground_plots_keep_crossings() {
+        let mut chart = ChartContext::new(10, 5);
+        chart.draw_grid(2, 2, None);
+        chart.draw_axes((0.0, 6.0), (-1.0, 1.0), None);
+        chart.plot_function(|x: f64| x.sin(), 0.0, 6.0, None);
+        chart.plot_function(|x: f64| (x * 0.5).cos() * 0.5, 0.0, 6.0, None);
+
+        assert_eq!(
+            chart.canvas.render_no_color(),
+            concat!(
+                "⠐⠒⡴⡒⢄⡇⠀⠀⠀⠀\n",
+                "⡇⡜⠀⠈⢺⡄⠀⠀⠀⠀\n",
+                "⠘⠒⠒⠒⠒⢣⡀⠒⠒⢀\n",
+                "⡇⠀⠀⠀⠀⠈⢗⢄⢀⠎\n",
+                "⣇⣀⣀⣀⣀⣇⠈⠒⠋⠒\n",
+            ),
+        );
+    }
+
+    #[test]
+    fn line_chart_uses_full_x_span() {
+        let mut chart = ChartContext::new(6, 3);
+        chart.line_chart(&[(0.0, 0.0), (1.0, 1.0)], None);
+
+        let rendered = chart.canvas.render_no_color();
+        let rows: Vec<_> = rendered.lines().collect();
+        let blank = '\u{2800}';
+
+        assert!(rows.iter().any(|row| row.chars().next().unwrap_or(blank) != blank));
+        assert!(rows.iter().any(|row| row.chars().last().unwrap_or(blank) != blank));
     }
 }
