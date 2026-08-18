@@ -241,7 +241,7 @@ fn main() -> std::io::Result<()> {
             last_term = (cols, rows);
             let width = (cols as usize).saturating_sub(4);
             let height = (rows as usize).saturating_sub(6);
-            let mut new_chart = ChartContext::new(width, height);
+            let new_chart = ChartContext::new(width, height);
             let w_px = new_chart.canvas.pixel_width();
             let h_px = new_chart.canvas.pixel_height();
             chart = Some(new_chart);
@@ -319,7 +319,7 @@ fn main() -> std::io::Result<()> {
         let pos_tri = Vec3::new(0.0, 0.1, z_push - 0.2);
 
         // Helper closure: world->camera->screen
-        let mut to_screen = |v_world: Vec3| -> Option<(isize, isize, f64)> {
+        let to_screen = |v_world: Vec3| -> Option<(isize, isize, f64)> {
             // camera space is world - cam
             let v_cam = v_world.sub(cam);
             project_to_screen(v_cam, cw, ch, scale)
@@ -464,4 +464,3 @@ fn main() -> std::io::Result<()> {
         thread::sleep(time::Duration::from_millis(30));
     }
 }
-

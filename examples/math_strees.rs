@@ -40,8 +40,6 @@ fn main() -> io::Result<()> {
     let mut last_fps_time = Instant::now();
 
     while running {
-        let frame_start = Instant::now();
-
         // --- A. GESTIÓN DE TAMAÑO ---
         let (nc, nr) = terminal::size()?;
         if nc != cols || nr != rows {

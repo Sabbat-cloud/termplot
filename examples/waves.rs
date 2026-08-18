@@ -6,7 +6,6 @@ use crossterm::{
     terminal::{self, ClearType},
 };
 use std::collections::VecDeque;
-use std::f64::consts::PI;
 use std::io::{self, Write};
 use std::time::{Duration, Instant};
 use termplot_rs::ChartContext;
@@ -38,7 +37,6 @@ fn main() -> io::Result<()> {
     let num_bars = 30;
     let mut spectrum: Vec<f64> = vec![0.0; num_bars];
 
-    let mut frame_count = 0;
     let start_time = Instant::now();
 
     while running {
@@ -156,7 +154,6 @@ fn main() -> io::Result<()> {
         print!("{}", output.replace('\n', "\r\n"));
         io::stdout().flush()?;
 
-        frame_count += 1;
         std::thread::sleep(Duration::from_millis(16)); // ~60 FPS cap
     }
 

@@ -240,8 +240,6 @@ fn main() -> io::Result<()> {
     let mut frame_ms_avg: f64 = 0.0;
     let mut frame_counter: u32 = 0;
     let mut fps_window_start = Instant::now();
-    let mut last_frame_ms: f64 = 0.0;
-
     while running {
         let frame_begin = Instant::now();
 
@@ -441,7 +439,7 @@ fn main() -> io::Result<()> {
         }
 
         // Per-frame time (ms)
-        last_frame_ms = frame_begin.elapsed().as_secs_f64() * 1000.0;
+        let last_frame_ms = frame_begin.elapsed().as_secs_f64() * 1000.0;
         let alpha_ms = 0.12;
         frame_ms_avg = if frame_ms_avg == 0.0 {
             last_frame_ms
@@ -489,4 +487,3 @@ fn main() -> io::Result<()> {
     terminal::disable_raw_mode()?;
     Ok(())
 }
-

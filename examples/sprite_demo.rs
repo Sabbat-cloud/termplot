@@ -6,7 +6,7 @@ use crossterm::{
     terminal::{self, ClearType},
 };
 use std::io::{self, Write};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use termplot_rs::ChartContext;
 
 // --- MOTOR DE SPRITES ---
@@ -14,7 +14,7 @@ use termplot_rs::ChartContext;
 #[derive(Clone)]
 struct Sprite {
     width: usize,
-    height: usize,
+    _height: usize,
     data: Vec<u8>, // 1 = pixel encendido, 0 = apagado
     color: Color,
 }
@@ -28,7 +28,7 @@ impl Sprite {
             if char == '#' { data.push(1); }
             else if char == '.' || char == ' ' { data.push(0); }
         }
-        Self { width, height, data, color }
+        Self { width, _height: height, data, color }
     }
 
     fn draw(&self, chart: &mut ChartContext, x_pos: f64, y_pos: f64) {
@@ -109,7 +109,7 @@ fn main() -> io::Result<()> {
 
     // Estado del juego
     let mut ship_x = (chart.canvas.pixel_width() / 2) as f64;
-    let mut ship_y = (chart.canvas.pixel_height() - 10) as f64;
+    let ship_y = (chart.canvas.pixel_height() - 10) as f64;
     
     let mut aliens_x = 10.0;
     let mut aliens_dir = 1.0;
