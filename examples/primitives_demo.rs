@@ -33,7 +33,7 @@ impl BouncingShape {
         self.y += self.vy;
 
         // Permite que salgan un poco de la pantalla para demostrar el CLIPPING
-        let bounds_margin = self.size + 10.0; 
+        let bounds_margin = self.size + 10.0;
 
         if self.x < -bounds_margin || self.x > w + bounds_margin {
             self.vx *= -1.0;
@@ -51,15 +51,33 @@ impl BouncingShape {
         match self.kind {
             ShapeKind::RectFilled => {
                 // Se dibujará incluso si la mitad está fuera de la pantalla gracias al Clipping
-                chart.canvas.rect_filled(px - s, py - s, (s * 2) as usize, (s * 2) as usize, self.color);
+                chart.canvas.rect_filled(
+                    px - s,
+                    py - s,
+                    (s * 2) as usize,
+                    (s * 2) as usize,
+                    self.color,
+                );
             }
             ShapeKind::CircleFilled => {
                 chart.canvas.circle_filled(px, py, s, self.color);
             }
             ShapeKind::Line => {
                 // Una línea larga cruzando su centro
-                chart.canvas.line_screen(px - s * 2, py - s * 2, px + s * 2, py + s * 2, self.color);
-                chart.canvas.line_screen(px - s * 2, py + s * 2, px + s * 2, py - s * 2, self.color);
+                chart.canvas.line_screen(
+                    px - s * 2,
+                    py - s * 2,
+                    px + s * 2,
+                    py + s * 2,
+                    self.color,
+                );
+                chart.canvas.line_screen(
+                    px - s * 2,
+                    py + s * 2,
+                    px + s * 2,
+                    py - s * 2,
+                    self.color,
+                );
             }
             ShapeKind::Eraser => {
                 // MÁSCARA: Usamos unset_pixel para "agujerear" lo que ya se ha dibujado
@@ -92,12 +110,52 @@ fn main() -> io::Result<()> {
     let mut render_buffer = String::with_capacity(cols as usize * rows as usize * 15);
 
     let mut shapes = vec![
-        BouncingShape { x: 20.0, y: 20.0, vx: 1.5, vy: 1.1, size: 25.0, kind: ShapeKind::CircleFilled, color: Some(Color::Blue) },
-        BouncingShape { x: 80.0, y: 40.0, vx: -1.2, vy: 1.8, size: 20.0, kind: ShapeKind::RectFilled, color: Some(Color::Red) },
-        BouncingShape { x: 50.0, y: 10.0, vx: 2.0, vy: -1.5, size: 15.0, kind: ShapeKind::CircleFilled, color: Some(Color::Green) },
-        BouncingShape { x: 10.0, y: 60.0, vx: 2.5, vy: 0.5, size: 30.0, kind: ShapeKind::Line, color: Some(Color::BrightYellow) },
+        BouncingShape {
+            x: 20.0,
+            y: 20.0,
+            vx: 1.5,
+            vy: 1.1,
+            size: 25.0,
+            kind: ShapeKind::CircleFilled,
+            color: Some(Color::Blue),
+        },
+        BouncingShape {
+            x: 80.0,
+            y: 40.0,
+            vx: -1.2,
+            vy: 1.8,
+            size: 20.0,
+            kind: ShapeKind::RectFilled,
+            color: Some(Color::Red),
+        },
+        BouncingShape {
+            x: 50.0,
+            y: 10.0,
+            vx: 2.0,
+            vy: -1.5,
+            size: 15.0,
+            kind: ShapeKind::CircleFilled,
+            color: Some(Color::Green),
+        },
+        BouncingShape {
+            x: 10.0,
+            y: 60.0,
+            vx: 2.5,
+            vy: 0.5,
+            size: 30.0,
+            kind: ShapeKind::Line,
+            color: Some(Color::BrightYellow),
+        },
         // EL BORRADOR: Perforará círculos transparentes en las formas anteriores
-        BouncingShape { x: 60.0, y: 30.0, vx: -1.0, vy: -1.0, size: 12.0, kind: ShapeKind::Eraser, color: None },
+        BouncingShape {
+            x: 60.0,
+            y: 30.0,
+            vx: -1.0,
+            vy: -1.0,
+            size: 12.0,
+            kind: ShapeKind::Eraser,
+            color: None,
+        },
     ];
 
     let mut running = true;
@@ -118,7 +176,8 @@ fn main() -> io::Result<()> {
         // --- 2. RESIZE ---
         let (nc, nr) = terminal::size()?;
         if nc != cols || nr != rows {
-            cols = nc; rows = nr;
+            cols = nc;
+            rows = nr;
             chart = ChartContext::new((cols - 4) as usize, (rows - 4) as usize);
         }
 
@@ -159,16 +218,25 @@ fn main() -> io::Result<()> {
             ColorBlend::Overwrite => "OVERWRITE (Último Gana)",
             ColorBlend::KeepFirst => "KEEP_FIRST (Primero Gana)",
         };
-        let hud_text = format!(" FPS: {} | Modo Mezcla [B]: {} | Salir [Q] ", current_fps, blend_str);
+        let hud_text = format!(
+            " FPS: {} | Modo Mezcla [B]: {} | Salir [Q] ",
+            current_fps, blend_str
+        );
         chart.text(&hud_text, 0.02, 0.02, Some(Color::White));
 
         // --- 6. RENDERIZADO OPTIMIZADO ZERO-ALLOCATION ---
         execute!(stdout, cursor::MoveTo(0, 0))?;
-        
+
         render_buffer.clear(); // Vaciamos el buffer pero MANTENEMOS la memoria asignada
-        
+
         // Escribimos directamente en nuestro String buffer
-        chart.canvas.render_to(&mut render_buffer, true, Some("🚀 TERM-PLOT PRIMITIVES & BLENDING 🚀"))
+        chart
+            .canvas
+            .render_to(
+                &mut render_buffer,
+                true,
+                Some("🚀 TERM-PLOT PRIMITIVES & BLENDING 🚀"),
+            )
             .expect("Error formateando canvas");
 
         // Volcamos a la terminal cambiando los saltos de línea para raw_mode

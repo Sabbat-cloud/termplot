@@ -200,7 +200,11 @@ fn explode(rng: &mut ThreadRng, rocket: &Rocket, out: &mut Vec<Particle>) {
             vy,
             life,
             fade: life,
-            color: if is_sparkle { Color::White } else { rocket.color },
+            color: if is_sparkle {
+                Color::White
+            } else {
+                rocket.color
+            },
             sparkle: is_sparkle,
         });
     }
@@ -327,9 +331,8 @@ fn main() -> io::Result<()> {
         let mut i = 0;
         let ceiling_margin = (h_px as f64) * 0.06 + 2.0;
         while i < rockets.len() {
-            let do_explode = rockets[i].fuse <= 0.0
-                || rockets[i].vy > -1.0
-                || rockets[i].y <= ceiling_margin;
+            let do_explode =
+                rockets[i].fuse <= 0.0 || rockets[i].vy > -1.0 || rockets[i].y <= ceiling_margin;
 
             if do_explode {
                 explode(&mut rng, &rockets[i], &mut particles);
@@ -370,14 +373,17 @@ fn main() -> io::Result<()> {
                     continue;
                 }
                 if let Some((sx, sy)) = clamp_to_screen(*tx, *ty, w_px, h_px) {
-                    chart.canvas
+                    chart
+                        .canvas
                         .set_pixel_screen(sx, sy, Some(Color::BrightBlack));
                 }
             }
             if let Some((sx, sy)) = clamp_to_screen(r.x, r.y, w_px, h_px) {
                 chart.canvas.set_pixel_screen(sx, sy, Some(r.color));
                 if sx + 1 < w_px {
-                    chart.canvas.set_pixel_screen(sx + 1, sy, Some(Color::White));
+                    chart
+                        .canvas
+                        .set_pixel_screen(sx + 1, sy, Some(Color::White));
                 }
             }
         }
@@ -471,9 +477,10 @@ fn main() -> io::Result<()> {
 
         // Output
         execute!(stdout, cursor::MoveTo(0, 0))?;
-        let output = chart
-            .canvas
-            .render_with_options(true, Some("PARTICLE SYSTEM — FIREWORKS (PRO + FPS + SLEEP)"));
+        let output = chart.canvas.render_with_options(
+            true,
+            Some("PARTICLE SYSTEM — FIREWORKS (PRO + FPS + SLEEP)"),
+        );
         print!("{}", output.replace('\n', "\r\n"));
         io::stdout().flush()?;
 

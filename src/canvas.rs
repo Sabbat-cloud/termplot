@@ -102,10 +102,19 @@ impl BrailleCanvas {
         }
     }
 
-    pub(crate) fn overlay_without_background(&mut self, top: &BrailleCanvas, background_mask: &[u8]) {
+    #[allow(clippy::needless_range_loop)]
+    pub(crate) fn overlay_without_background(
+        &mut self,
+        top: &BrailleCanvas,
+        background_mask: &[u8],
+    ) {
         assert_eq!(self.width, top.width, "canvas width mismatch");
         assert_eq!(self.height, top.height, "canvas height mismatch");
-        assert_eq!(self.buffer.len(), background_mask.len(), "background mask size mismatch");
+        assert_eq!(
+            self.buffer.len(),
+            background_mask.len(),
+            "background mask size mismatch"
+        );
 
         for idx in 0..self.buffer.len() {
             if top.buffer[idx] == 0 && top.text_layer[idx].is_none() {
@@ -145,10 +154,14 @@ impl BrailleCanvas {
     #[inline]
     fn get_mask(sub_x: usize, sub_y: usize) -> u8 {
         match (sub_x, sub_y) {
-            (0, 0) => 0x01, (1, 0) => 0x08,
-            (0, 1) => 0x02, (1, 1) => 0x10,
-            (0, 2) => 0x04, (1, 2) => 0x20,
-            (0, 3) => 0x40, (1, 3) => 0x80,
+            (0, 0) => 0x01,
+            (1, 0) => 0x08,
+            (0, 1) => 0x02,
+            (1, 1) => 0x10,
+            (0, 2) => 0x04,
+            (1, 2) => 0x20,
+            (0, 3) => 0x40,
+            (1, 3) => 0x80,
             _ => 0,
         }
     }
@@ -205,10 +218,12 @@ impl BrailleCanvas {
     }
 
     pub fn toggle_pixel_screen(&mut self, x: usize, y: usize, color: Option<Color>) {
-        if x >= self.pixel_width() || y >= self.pixel_height() { return; }
+        if x >= self.pixel_width() || y >= self.pixel_height() {
+            return;
+        }
         let index = self.idx(x / 2, y / 4);
         let mask = Self::get_mask(x % 2, y % 4);
-        
+
         if (self.buffer[index] & mask) != 0 {
             self.unset_pixel_impl(x, y);
         } else {
@@ -222,13 +237,29 @@ impl BrailleCanvas {
         let mut code = 0;
         let w = self.pixel_width() as isize;
         let h = self.pixel_height() as isize;
-        
-        if x < 0 { code |= 1; } else if x >= w { code |= 2; }
-        if y < 0 { code |= 4; } else if y >= h { code |= 8; }
+
+        if x < 0 {
+            code |= 1;
+        } else if x >= w {
+            code |= 2;
+        }
+        if y < 0 {
+            code |= 4;
+        } else if y >= h {
+            code |= 8;
+        }
         code
     }
 
-    fn bresenham(&mut self, mut x0: isize, mut y0: isize, mut x1: isize, mut y1: isize, color: Option<Color>, cartesian: bool) {
+    fn bresenham(
+        &mut self,
+        mut x0: isize,
+        mut y0: isize,
+        mut x1: isize,
+        mut y1: isize,
+        color: Option<Color>,
+        cartesian: bool,
+    ) {
         let w = self.pixel_width() as isize;
         let h = self.pixel_height() as isize;
 
@@ -239,7 +270,8 @@ impl BrailleCanvas {
 
         loop {
             if (outcode0 | outcode1) == 0 {
-                accept = true; break;
+                accept = true;
+                break;
             } else if (outcode0 & outcode1) != 0 {
                 break;
             } else {
@@ -262,16 +294,20 @@ impl BrailleCanvas {
                 }
 
                 if outcode_out == outcode0 {
-                    x0 = x; y0 = y;
+                    x0 = x;
+                    y0 = y;
                     outcode0 = self.compute_outcode(x0, y0);
                 } else {
-                    x1 = x; y1 = y;
+                    x1 = x;
+                    y1 = y;
                     outcode1 = self.compute_outcode(x1, y1);
                 }
             }
         }
 
-        if !accept { return; }
+        if !accept {
+            return;
+        }
 
         let dx = (x1 - x0).abs();
         let dy = -(y1 - y0).abs();
@@ -288,10 +324,18 @@ impl BrailleCanvas {
             } else {
                 self.set_pixel_screen(x as usize, y as usize, color);
             }
-            if x == x1 && y == y1 { break; }
+            if x == x1 && y == y1 {
+                break;
+            }
             let e2 = 2 * err;
-            if e2 >= dy { err += dy; x += sx; }
-            if e2 <= dx { err += dx; y += sy; }
+            if e2 >= dy {
+                err += dy;
+                x += sx;
+            }
+            if e2 <= dx {
+                err += dx;
+                y += sy;
+            }
         }
     }
 
@@ -299,7 +343,14 @@ impl BrailleCanvas {
         self.bresenham(x0, y0, x1, y1, color, true);
     }
 
-    pub fn line_screen(&mut self, x0: isize, y0: isize, x1: isize, y1: isize, color: Option<Color>) {
+    pub fn line_screen(
+        &mut self,
+        x0: isize,
+        y0: isize,
+        x1: isize,
+        y1: isize,
+        color: Option<Color>,
+    ) {
         self.bresenham(x0, y0, x1, y1, color, false);
     }
 
@@ -328,8 +379,14 @@ impl BrailleCanvas {
 
         let mut draw_octants = |cx: isize, cy: isize, x: isize, y: isize| {
             let points = [
-                (cx + x, cy + y), (cx - x, cy + y), (cx + x, cy - y), (cx - x, cy - y),
-                (cx + y, cy + x), (cx - y, cy + x), (cx + y, cy - x), (cx - y, cy - x),
+                (cx + x, cy + y),
+                (cx - x, cy + y),
+                (cx + x, cy - y),
+                (cx - x, cy - y),
+                (cx + y, cy + x),
+                (cx - y, cy + x),
+                (cx + y, cy - x),
+                (cx - y, cy - x),
             ];
             for (px, py) in points {
                 if px >= 0 && py >= 0 {
@@ -412,14 +469,21 @@ impl BrailleCanvas {
         }
     }
 
-    pub fn render_to<W: Write>(&self, w: &mut W, show_border: bool, title: Option<&str>) -> fmt::Result {
+    pub fn render_to<W: Write>(
+        &self,
+        w: &mut W,
+        show_border: bool,
+        title: Option<&str>,
+    ) -> fmt::Result {
         if let Some(t) = title {
             writeln!(w, "{:^width$}", t, width = self.width + 2)?;
         }
 
         if show_border {
             w.write_char('┌')?;
-            for _ in 0..self.width { w.write_char('─')?; }
+            for _ in 0..self.width {
+                w.write_char('─')?;
+            }
             w.write_char('┐')?;
             w.write_char('\n')?;
         }
@@ -427,7 +491,9 @@ impl BrailleCanvas {
         let mut last_color: Option<Color> = None;
 
         for row in 0..self.height {
-            if show_border { w.write_char('│')?; }
+            if show_border {
+                w.write_char('│')?;
+            }
 
             for col in 0..self.width {
                 let idx = self.idx(col, row);
@@ -457,13 +523,17 @@ impl BrailleCanvas {
                 last_color = None;
             }
 
-            if show_border { w.write_char('│')?; }
+            if show_border {
+                w.write_char('│')?;
+            }
             w.write_char('\n')?;
         }
 
         if show_border {
             w.write_char('└')?;
-            for _ in 0..self.width { w.write_char('─')?; }
+            for _ in 0..self.width {
+                w.write_char('─')?;
+            }
             w.write_char('┘')?;
         }
 
@@ -545,5 +615,4 @@ mod tests {
         assert_eq!(canvas.colors[0], Some(Color::Green));
         assert_eq!(canvas.render_no_color(), "⣿\n");
     }
-
 }

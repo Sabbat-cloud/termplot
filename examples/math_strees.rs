@@ -18,20 +18,20 @@ fn main() -> io::Result<()> {
     execute!(stdout, cursor::Hide, terminal::Clear(ClearType::All))?;
 
     let mut sys = System::new_all();
-    
+
     // Buffers gráficos
     let history_len = 100;
     let mut cpu_history: VecDeque<f64> = VecDeque::from(vec![0.0; history_len]);
-    
+
     // Configuración de Estrés
     // "Complexity" = Cuántas operaciones trigonométricas hacemos POR PÍXEL
-    let mut complexity: usize = 10; 
+    let mut complexity: usize = 10;
     let mut time_val: f64 = 0.0;
 
     let (mut cols, mut rows) = terminal::size()?;
     let width = (cols as usize).saturating_sub(2);
     let height = (rows as usize).saturating_sub(4);
-    
+
     let mut chart = ChartContext::new(width, height);
     let mut running = true;
     let mut last_sys_update = Instant::now();
@@ -43,7 +43,8 @@ fn main() -> io::Result<()> {
         // --- A. GESTIÓN DE TAMAÑO ---
         let (nc, nr) = terminal::size()?;
         if nc != cols || nr != rows {
-            cols = nc; rows = nr;
+            cols = nc;
+            rows = nr;
             let w = (cols as usize).saturating_sub(2);
             let h = (rows as usize).saturating_sub(4);
             chart = ChartContext::new(w, h);
@@ -85,7 +86,7 @@ fn main() -> io::Result<()> {
                 // Coordenadas normalizadas
                 let u = x as f64 * 0.05;
                 let v = y as f64 * 0.05;
-                
+
                 let mut val = 0.0;
 
                 // BUCLE DE ESTRÉS: Realiza operaciones pesadas 'complexity' veces por píxel
@@ -114,27 +115,41 @@ fn main() -> io::Result<()> {
 
         // --- E. GRAFICA SUPERIOR (Monitor) ---
         // Línea divisoria
-        chart.canvas.line_screen(0, sim_top as isize, w_px as isize, sim_top as isize, Some(Color::White));
+        chart.canvas.line_screen(
+            0,
+            sim_top as isize,
+            w_px as isize,
+            sim_top as isize,
+            Some(Color::White),
+        );
 
         // Dibujar CPU Chart
         let chart_w = w_px as f64;
         let chart_h = sim_top as f64;
         let step = chart_w / cpu_history.len() as f64;
-        
+
         let mut prev_x = 0.0;
         let mut prev_y = chart_h - (cpu_history[0] / 100.0 * (chart_h - 2.0));
 
         for (i, &cpu) in cpu_history.iter().enumerate().skip(1) {
             let curr_x = i as f64 * step;
             let curr_y = chart_h - (cpu / 100.0 * (chart_h - 2.0));
-            
+
             // Color de la línea cambia según carga
-            let line_col = if cpu > 80.0 { Color::Red } else if cpu > 50.0 { Color::Yellow } else { Color::Green };
-            
+            let line_col = if cpu > 80.0 {
+                Color::Red
+            } else if cpu > 50.0 {
+                Color::Yellow
+            } else {
+                Color::Green
+            };
+
             chart.canvas.line_screen(
-                prev_x as isize, prev_y as isize,
-                curr_x as isize, curr_y as isize,
-                Some(line_col)
+                prev_x as isize,
+                prev_y as isize,
+                curr_x as isize,
+                curr_y as isize,
+                Some(line_col),
             );
             prev_x = curr_x;
             prev_y = curr_y;
@@ -147,13 +162,15 @@ fn main() -> io::Result<()> {
 
         let stress_txt = format!("MATH LOAD: {} ops/pixel", complexity);
         chart.text(&stress_txt, 0.02, 0.55, Some(Color::BrightRed));
-        
+
         let fps_txt = format!("FPS: {}", fps);
         chart.text(&fps_txt, 0.85, 0.05, Some(Color::Cyan));
 
         // Render
         execute!(stdout, cursor::MoveTo(0, 0))?;
-        let output = chart.canvas.render_with_options(true, Some("CPU TORTURE TEST"));
+        let output = chart
+            .canvas
+            .render_with_options(true, Some("CPU TORTURE TEST"));
         print!("{}", output.replace('\n', "\r\n"));
         io::stdout().flush()?;
 

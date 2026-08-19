@@ -18,13 +18,13 @@ fn main() {
 
     let labels = vec!["Ene", "Feb", "Mar", "Abr", "May", "Jun"];
     let num_bars = data_bars.len();
-    
+
     // Ancho de cada barra en caracteres
     let bar_char_width = width / num_bars;
 
     for i in 0..num_bars {
         let label = labels[i];
-        
+
         // Calculamos la columna de carácter donde debe empezar para estar centrado
         let start_col = i * bar_char_width;
         let center_offset = (bar_char_width as i32 - label.len() as i32) / 2;

@@ -42,14 +42,16 @@ fn main() -> io::Result<()> {
     let mut fps = 0;
 
     // Generamos 1000 partículas para estrés adicional
-    let mut particles: Vec<Particle> = (0..1000).map(|_| {
-        Particle {
-            x: rand::random::<f64>() * (width * 2) as f64,
-            y: rand::random::<f64>() * (height * 4) as f64,
-            speed: 1.0 + rand::random::<f64>() * 3.0,
-            //angle: rand::random::<f64>() * PI * 2.0, Por ahora no se usa
-        }
-    }).collect();
+    let mut particles: Vec<Particle> = (0..1000)
+        .map(|_| {
+            Particle {
+                x: rand::random::<f64>() * (width * 2) as f64,
+                y: rand::random::<f64>() * (height * 4) as f64,
+                speed: 1.0 + rand::random::<f64>() * 3.0,
+                //angle: rand::random::<f64>() * PI * 2.0, Por ahora no se usa
+            }
+        })
+        .collect();
 
     while running {
         let frame_start = Instant::now();
@@ -90,7 +92,8 @@ fn main() -> io::Result<()> {
         // Iteramos sobre CADA PÍXEL de la pantalla
         // Nota: Rayon (paralelismo) haría esto volar, pero queremos probar
         // la velocidad "single-threaded" de tu librería.
-        for py in (0..h_px).step_by(2) { // Step 2 para optimizar un poco la demo visual, o 1 para full estrés
+        for py in (0..h_px).step_by(2) {
+            // Step 2 para optimizar un poco la demo visual, o 1 para full estrés
             for px in (0..w_px).step_by(2) {
                 let x = px as f64;
                 let y = py as f64;
@@ -98,7 +101,7 @@ fn main() -> io::Result<()> {
                 // Matemáticas complejas para generar patrones de interferencia
                 // Valor 1: Seno moviéndose horizontalmente
                 let v1 = (x * 0.02 + t).sin();
-                
+
                 // Valor 2: Seno moviéndose en diagonal
                 let v2 = ((x * 0.5 + y * 0.5) * 0.02 + t * 1.5).sin(); // [Image of sine wave interference]
 
@@ -110,13 +113,19 @@ fn main() -> io::Result<()> {
 
                 // Suma y normalización (-1 a 1 -> 0 a 1)
                 let v = (v1 + v2 + v3) / 3.0;
-                
+
                 // Mapeo a colores ANSI básicos según la intensidad
-                let color = if v > 0.8 { Some(Color::White) }
-                else if v > 0.4 { Some(Color::Cyan) }
-                else if v > 0.0 { Some(Color::Blue) }
-                else if v > -0.4 { Some(Color::Magenta) }
-                else { Some(Color::Red) }; // Fondo "oscuro"
+                let color = if v > 0.8 {
+                    Some(Color::White)
+                } else if v > 0.4 {
+                    Some(Color::Cyan)
+                } else if v > 0.0 {
+                    Some(Color::Blue)
+                } else if v > -0.4 {
+                    Some(Color::Magenta)
+                } else {
+                    Some(Color::Red)
+                }; // Fondo "oscuro"
 
                 // Dibujamos un bloque de 2x2 para rellenar rápido (optimización visual)
                 if let Some(c) = color {
@@ -139,26 +148,40 @@ fn main() -> io::Result<()> {
                 p.y = 0.0;
                 p.x = rand::random::<f64>() * w_float;
             }
-            if p.x >= w_float { p.x = 0.0; }
-            if p.x < 0.0 { p.x = w_float; }
+            if p.x >= w_float {
+                p.x = 0.0;
+            }
+            if p.x < 0.0 {
+                p.x = w_float;
+            }
 
             // Dibujar partícula (Punto brillante)
             // Usamos set_pixel_screen directo
-            chart.canvas.set_pixel_screen(p.x as usize, p.y as usize, Some(Color::BrightYellow));
+            chart
+                .canvas
+                .set_pixel_screen(p.x as usize, p.y as usize, Some(Color::BrightYellow));
         }
 
         // 5. SALIDA A PANTALLA
         execute!(stdout, cursor::MoveTo(0, 0))?;
-        
+
         // Creamos el string del frame
-        let output = chart.canvas.render_with_options(true, Some("PLASMA STRESS TEST (Math + Particles)"));
-        
+        let output = chart
+            .canvas
+            .render_with_options(true, Some("PLASMA STRESS TEST (Math + Particles)"));
+
         // Imprimimos de golpe
         // Usamos write_all para evitar formateos extra de print!
         stdout.write_all(output.replace('\n', "\r\n").as_bytes())?;
-        
+
         // Info debug
-        let debug_info = format!("\r\nFPS: {} | Res: {}x{} px | Pts: {}", fps, w_px, h_px, w_px * h_px);
+        let debug_info = format!(
+            "\r\nFPS: {} | Res: {}x{} px | Pts: {}",
+            fps,
+            w_px,
+            h_px,
+            w_px * h_px
+        );
         stdout.write_all(debug_info.as_bytes())?;
         stdout.flush()?;
 

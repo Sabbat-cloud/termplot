@@ -67,7 +67,7 @@ fn main() {
     println!("\n{}", "5. Logarithmic Spiral (Auto-Scaled)".yellow());
     let mut chart = ChartContext::new(60, 15);
     let mut spiral_points = Vec::new();
-    
+
     // CORRECCIÓN: Tipado explícito para que .sin()/.cos() sepan que es f64
     let mut t: f64 = 0.0;
 
@@ -149,10 +149,7 @@ fn main() {
     v8_chart.text("Cosine", 0.4, 0.8, None);
 
     // Sub-ejemplo A: Sin color (ASCII/Braille puro)
-    println!(
-        "{}",
-        "\nA) Render (render_no_color):".bright_black()
-    );
+    println!("{}", "\nA) Render (render_no_color):".bright_black());
     println!("{}", v8_chart.canvas.render_no_color());
 
     // Sub-ejemplo B: Con título centrado y sin bordes
@@ -195,13 +192,7 @@ fn main() {
     println!("{}", chart.canvas.render());
 
     // --- 10. ANIMACIÓN PRO ---
-    println!(
-        "\n{}",
-        "10. Anim PRO"
-            .on_red()
-            .white()
-            .bold()
-    );
+    println!("\n{}", "10. Anim PRO".on_red().white().bold());
     println!("Rendering... (Ctrl+C exit)");
     thread::sleep(time::Duration::from_secs(1));
 

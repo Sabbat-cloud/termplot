@@ -101,7 +101,7 @@ fn spawn_rocket_pro(rng: &mut ThreadRng, w_px: usize, h_px: usize) -> Rocket {
 
     // Queremos que el ápice esté en una banda "bonita" y visible.
     // (0,0) arriba => target_apex_y pequeño = más alto.
-    let band_top = (h_px as f64) * 0.18;   // 18%
+    let band_top = (h_px as f64) * 0.18; // 18%
     let band_bottom = (h_px as f64) * 0.38; // 38%
     let target_apex_y = rng.gen_range(band_top..band_bottom);
 
@@ -202,7 +202,11 @@ fn explode(rng: &mut ThreadRng, rocket: &Rocket, out: &mut Vec<Particle>) {
             vy,
             life,
             fade: life,
-            color: if is_sparkle { Color::White } else { rocket.color },
+            color: if is_sparkle {
+                Color::White
+            } else {
+                rocket.color
+            },
             sparkle: is_sparkle,
         });
     }
@@ -298,9 +302,8 @@ fn main() -> io::Result<()> {
         let mut i = 0;
         let ceiling_margin = (h_px as f64) * 0.06 + 2.0;
         while i < rockets.len() {
-            let do_explode = rockets[i].fuse <= 0.0
-                || rockets[i].vy > -1.0
-                || rockets[i].y <= ceiling_margin;
+            let do_explode =
+                rockets[i].fuse <= 0.0 || rockets[i].vy > -1.0 || rockets[i].y <= ceiling_margin;
 
             if do_explode {
                 explode(&mut rng, &rockets[i], &mut particles);
@@ -341,13 +344,17 @@ fn main() -> io::Result<()> {
                     continue;
                 }
                 if let Some((sx, sy)) = clamp_to_screen(*tx, *ty, w_px, h_px) {
-                    chart.canvas.set_pixel_screen(sx, sy, Some(Color::BrightBlack));
+                    chart
+                        .canvas
+                        .set_pixel_screen(sx, sy, Some(Color::BrightBlack));
                 }
             }
             if let Some((sx, sy)) = clamp_to_screen(r.x, r.y, w_px, h_px) {
                 chart.canvas.set_pixel_screen(sx, sy, Some(r.color));
                 if sx + 1 < w_px {
-                    chart.canvas.set_pixel_screen(sx + 1, sy, Some(Color::White));
+                    chart
+                        .canvas
+                        .set_pixel_screen(sx + 1, sy, Some(Color::White));
                 }
             }
         }
@@ -424,4 +431,3 @@ fn main() -> io::Result<()> {
     terminal::disable_raw_mode()?;
     Ok(())
 }
-

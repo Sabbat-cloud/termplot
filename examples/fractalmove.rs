@@ -12,9 +12,17 @@ use termplot_rs::ChartContext;
 fn main() -> io::Result<()> {
     loop {
         // Limpiamos pantalla para el menú
-        execute!(io::stdout(), terminal::Clear(ClearType::All), cursor::MoveTo(0, 0))?;
+        execute!(
+            io::stdout(),
+            terminal::Clear(ClearType::All),
+            cursor::MoveTo(0, 0)
+        )?;
 
         println!("{}", "=== FRACTAL EXPLORER ===".bright_cyan().bold());
+        println!(
+            "{}",
+            "z/x Zoom,  q/e rotate, cursor keys move fractal.".red()
+        );
         println!("1. {}", "Mandelbrot (Zoom/Pan/Rotate)".green());
         println!("2. {}", "Julia (Zoom/Pan/Rotate)".green());
         println!("3. {}", "Lorenz 3D (Rotate/Zoom)".yellow());
@@ -149,7 +157,9 @@ fn run_interactive_mandelbrot(is_julia: bool) -> io::Result<()> {
                         let old_im = new_im;
                         new_re = old_re * old_re - old_im * old_im + c_re;
                         new_im = 2.0 * old_re * old_im + c_im;
-                        if (new_re * new_re + new_im * new_im) > 4.0 { break; }
+                        if (new_re * new_re + new_im * new_im) > 4.0 {
+                            break;
+                        }
                         iter += 1;
                     }
                 }
@@ -172,11 +182,11 @@ fn run_interactive_mandelbrot(is_julia: bool) -> io::Result<()> {
         execute!(stdout, cursor::MoveTo(0, 0))?;
         let title = if is_julia { "JULIA" } else { "MANDELBROT" };
         let info = format!("{} (Zoom: {:.1}x | Iter: {})", title, zoom, max_iter);
-        
+
         // Renderizado optimizado
         let output = chart.canvas.render_with_options(true, Some(&info));
-        
-        // Escribimos directamente, evitando replaces costosos si es posible. 
+
+        // Escribimos directamente, evitando replaces costosos si es posible.
         // En Unix \n suele bastar, pero mantenemos replace para compatibilidad máxima si es necesario,
         // aunque crossterm suele manejar esto bien en raw mode.
         print!("{}", output.replace('\n', "\r\n"));
@@ -193,13 +203,17 @@ fn run_interactive_lorenz() -> io::Result<()> {
 
     // Pre-cálculo de Lorenz (igual que antes)
     let mut points_3d = Vec::new();
-    let mut x = 0.1; let mut y = 0.0; let mut z = 0.0;
+    let mut x = 0.1;
+    let mut y = 0.0;
+    let mut z = 0.0;
     let dt = 0.01;
     for _ in 0..1500 {
         let dx = 10.0 * (y - x);
         let dy = x * (28.0 - z) - y;
-        let dz = x * y - (8.0/3.0) * z;
-        x += dx * dt; y += dy * dt; z += dz * dt;
+        let dz = x * y - (8.0 / 3.0) * z;
+        x += dx * dt;
+        y += dy * dt;
+        z += dz * dt;
         points_3d.push((x, y, z));
     }
 
@@ -223,7 +237,9 @@ fn run_interactive_lorenz() -> io::Result<()> {
         if new_w != width || new_h != height {
             width = new_w;
             height = new_h;
-             if width < 10 || height < 5 { continue; }
+            if width < 10 || height < 5 {
+                continue;
+            }
             chart = ChartContext::new(width, height);
         } else {
             chart.canvas.clear();
@@ -264,7 +280,8 @@ fn run_interactive_lorenz() -> io::Result<()> {
             // Rotación Y
             let tmp_x = rx * angle_y.cos() - rz * angle_y.sin();
             let tmp_z = rx * angle_y.sin() + rz * angle_y.cos();
-            rx = tmp_x; rz = tmp_z;
+            rx = tmp_x;
+            rz = tmp_z;
 
             // Rotación X
             let tmp_y = ry * angle_x.cos() - rz * angle_x.sin();
@@ -280,13 +297,21 @@ fn run_interactive_lorenz() -> io::Result<()> {
 
             if let Some(prev) = prev_point {
                 // Usamos line_screen porque ya tenemos coordenadas de pantalla calculadas manualmente
-                chart.canvas.line_screen(prev.0, prev.1, current_point.0, current_point.1, Some(Color::BrightGreen));
+                chart.canvas.line_screen(
+                    prev.0,
+                    prev.1,
+                    current_point.0,
+                    current_point.1,
+                    Some(Color::BrightGreen),
+                );
             }
             prev_point = Some(current_point);
         }
 
         execute!(stdout, cursor::MoveTo(0, 0))?;
-        let output = chart.canvas.render_with_options(true, Some("LORENZ 3D (Arrows/Zoom)"));
+        let output = chart
+            .canvas
+            .render_with_options(true, Some("LORENZ 3D (Arrows/Zoom)"));
         print!("{}", output.replace('\n', "\r\n"));
         io::stdout().flush()?;
 

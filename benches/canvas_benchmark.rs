@@ -1,10 +1,10 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use colored::Color;
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use termplot_rs::canvas::BrailleCanvas;
 
 fn draw_primitives_bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("Dibujo de Primitivas");
-    
+
     // Un lienzo estándar de tamaño de terminal grande (100x50 caracteres -> 200x200 píxeles)
     let mut canvas = BrailleCanvas::new(100, 50);
 
@@ -15,7 +15,13 @@ fn draw_primitives_bench(c: &mut Criterion) {
             // Dibujamos 1000 líneas aleatorias que cruzan y se salen de la pantalla
             for i in 0..1000 {
                 let offset = (i % 300) as isize - 50; // Para que muchas salgan fuera y actúe el clipping
-                canvas.line_screen(offset, -offset, 200 - offset, 200 + offset, Some(Color::Green));
+                canvas.line_screen(
+                    offset,
+                    -offset,
+                    200 - offset,
+                    200 + offset,
+                    Some(Color::Green),
+                );
             }
             // Evita que el compilador optimice y elimine el bucle
             black_box(&canvas);
@@ -38,10 +44,10 @@ fn draw_primitives_bench(c: &mut Criterion) {
 
 fn render_loop_bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("Renderizado (String vs Zero-Allocation)");
-    
+
     // Lienzo de 120x40 caracteres (típico juego a pantalla completa)
     let mut canvas = BrailleCanvas::new(120, 40);
-    
+
     // Llenamos el lienzo con "ruido" para que el renderizador tenga trabajo real procesando colores y máscaras
     for y in 0..canvas.pixel_height() {
         for x in 0..canvas.pixel_width() {
@@ -65,7 +71,9 @@ fn render_loop_bench(c: &mut Criterion) {
     group.bench_function("render_to() - Zero-Allocation", |b| {
         b.iter(|| {
             reusable_buffer.clear(); // Vaciamos, pero la memoria sigue asignada
-            canvas.render_to(&mut reusable_buffer, true, Some("Benchmark")).unwrap();
+            canvas
+                .render_to(&mut reusable_buffer, true, Some("Benchmark"))
+                .unwrap();
             black_box(&reusable_buffer);
         })
     });

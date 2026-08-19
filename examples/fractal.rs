@@ -10,7 +10,12 @@ fn main() {
     loop {
         // --- Menú Principal ---
         print!("\x1B[2J\x1B[1;1H"); // Limpiar pantalla
-        println!("{}", "=== EXPLORADOR DE FRACTALES TERMPLOT ===".bright_cyan().bold());
+        println!(
+            "{}",
+            "=== EXPLORADOR DE FRACTALES TERMPLOT ==="
+                .bright_cyan()
+                .bold()
+        );
         println!("Selecciona una opción:");
         println!("1. {}", "Conjunto de Mandelbrot".green());
         println!("2. {}", "Conjunto de Julia".green());
@@ -41,7 +46,7 @@ fn main() {
 // --- 1. MANDELBROT (Pixel a Pixel) ---
 fn draw_mandelbrot() {
     let mut chart = ChartContext::new(WIDTH, HEIGHT);
-    
+
     // Dimensiones en píxeles virtuales (2x ancho, 4x alto)
     let w_px = (WIDTH * 2) as f64;
     let h_px = (HEIGHT * 4) as f64;
@@ -84,7 +89,10 @@ fn draw_mandelbrot() {
         }
     }
 
-    println!("{}", chart.canvas.render_with_options(true, Some("Mandelbrot")));
+    println!(
+        "{}",
+        chart.canvas.render_with_options(true, Some("Mandelbrot"))
+    );
 }
 
 // --- 2. JULIA (Pixel a Pixel) ---
@@ -123,7 +131,7 @@ fn draw_julia() {
             }
 
             if i < max_iter {
-                 let color = match i % 3 {
+                let color = match i % 3 {
                     0 => Color::Magenta,
                     1 => Color::Red,
                     _ => Color::BrightRed,
@@ -132,13 +140,18 @@ fn draw_julia() {
             }
         }
     }
-    println!("{}", chart.canvas.render_with_options(true, Some("Conjunto de Julia")));
+    println!(
+        "{}",
+        chart
+            .canvas
+            .render_with_options(true, Some("Conjunto de Julia"))
+    );
 }
 
 // --- 3. LORENZ (Vectorial / Auto-scale) ---
 fn draw_lorenz() {
     let mut chart = ChartContext::new(WIDTH, HEIGHT);
-    
+
     // Parámetros del sistema
     let sigma = 10.0;
     let rho = 28.0;
@@ -168,11 +181,16 @@ fn draw_lorenz() {
     // Usamos line_chart, que calculará automáticamente el Min/Max de los datos
     // y escalará todo para que quepa en el canvas.
     chart.line_chart(&points, Some(Color::BrightGreen));
-    
+
     // Añadimos un título
     chart.text("Plano X-Z", 0.05, 0.9, Some(Color::White));
-    
-    println!("{}", chart.canvas.render_with_options(true, Some("Atractor de Lorenz")));
+
+    println!(
+        "{}",
+        chart
+            .canvas
+            .render_with_options(true, Some("Atractor de Lorenz"))
+    );
 }
 
 // --- 4. HELECHO DE BARNSLEY (Scatter / Auto-scale) ---
@@ -205,12 +223,17 @@ fn draw_barnsley() {
         }
         x = next_x;
         y = next_y;
-        
+
         points.push((x, y));
     }
 
     // scatter también usa autoscale interno basado en los datos pasados
     chart.scatter(&points, Some(Color::Green));
 
-    println!("{}", chart.canvas.render_with_options(true, Some("Helecho de Barnsley")));
+    println!(
+        "{}",
+        chart
+            .canvas
+            .render_with_options(true, Some("Helecho de Barnsley"))
+    );
 }

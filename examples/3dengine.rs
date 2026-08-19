@@ -69,7 +69,12 @@ impl ZBuffer {
     }
 }
 
-fn project_to_screen(v_cam: Vec3, canvas_w: f64, canvas_h: f64, scale: f64) -> Option<(isize, isize, f64)> {
+fn project_to_screen(
+    v_cam: Vec3,
+    canvas_w: f64,
+    canvas_h: f64,
+    scale: f64,
+) -> Option<(isize, isize, f64)> {
     // Perspective projection. Only points in front of camera.
     if v_cam.z <= 0.06 {
         return None;
@@ -401,9 +406,39 @@ fn main() -> io::Result<()> {
                 }
             }
             if p.len() == 3 {
-                line_z(chart_ref, zb, p[0].0, p[0].1, p[0].2, p[1].0, p[1].1, p[1].2, Color::Yellow);
-                line_z(chart_ref, zb, p[1].0, p[1].1, p[1].2, p[2].0, p[2].1, p[2].2, Color::Yellow);
-                line_z(chart_ref, zb, p[2].0, p[2].1, p[2].2, p[0].0, p[0].1, p[0].2, Color::Yellow);
+                line_z(
+                    chart_ref,
+                    zb,
+                    p[0].0,
+                    p[0].1,
+                    p[0].2,
+                    p[1].0,
+                    p[1].1,
+                    p[1].2,
+                    Color::Yellow,
+                );
+                line_z(
+                    chart_ref,
+                    zb,
+                    p[1].0,
+                    p[1].1,
+                    p[1].2,
+                    p[2].0,
+                    p[2].1,
+                    p[2].2,
+                    Color::Yellow,
+                );
+                line_z(
+                    chart_ref,
+                    zb,
+                    p[2].0,
+                    p[2].1,
+                    p[2].2,
+                    p[0].0,
+                    p[0].1,
+                    p[0].2,
+                    Color::Yellow,
+                );
             }
         }
 
@@ -419,14 +454,30 @@ fn main() -> io::Result<()> {
             }
             for (a, b) in cube_edges.iter() {
                 if let (Some(p1), Some(p2)) = (proj[*a], proj[*b]) {
-                    line_z(chart_ref, zb, p1.0, p1.1, p1.2, p2.0, p2.1, p2.2, Color::Cyan);
+                    line_z(
+                        chart_ref,
+                        zb,
+                        p1.0,
+                        p1.1,
+                        p1.2,
+                        p2.0,
+                        p2.1,
+                        p2.2,
+                        Color::Cyan,
+                    );
                 }
             }
         }
 
         // Torus (wire rings)
         if show_torus {
-            let ring_skip = if detail <= 3 { 3 } else if detail <= 6 { 2 } else { 1 };
+            let ring_skip = if detail <= 3 {
+                3
+            } else if detail <= 6 {
+                2
+            } else {
+                1
+            };
             for (ri, ring) in torus_rings.iter().enumerate() {
                 if ri % ring_skip != 0 {
                     continue;
@@ -440,7 +491,17 @@ fn main() -> io::Result<()> {
 
                     if let Some(p) = to_screen(v) {
                         if let Some(pp) = prev {
-                            line_z(chart_ref, zb, pp.0, pp.1, pp.2, p.0, p.1, p.2, Color::Magenta);
+                            line_z(
+                                chart_ref,
+                                zb,
+                                pp.0,
+                                pp.1,
+                                pp.2,
+                                p.0,
+                                p.1,
+                                p.2,
+                                Color::Magenta,
+                            );
                         }
                         prev = Some(p);
                     } else {
@@ -475,8 +536,20 @@ fn main() -> io::Result<()> {
 
         // Donut (thick torus point cloud)
         if show_donut {
-            let ring_skip = if detail <= 3 { 3 } else if detail <= 6 { 2 } else { 1 };
-            let pt_skip = if detail <= 3 { 3 } else if detail <= 6 { 2 } else { 1 };
+            let ring_skip = if detail <= 3 {
+                3
+            } else if detail <= 6 {
+                2
+            } else {
+                1
+            };
+            let pt_skip = if detail <= 3 {
+                3
+            } else if detail <= 6 {
+                2
+            } else {
+                1
+            };
 
             for (ri, ring) in donut_rings.iter().enumerate() {
                 if ri % ring_skip != 0 {

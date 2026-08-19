@@ -28,7 +28,7 @@ fn main() -> io::Result<()> {
 
     // Inicializar sistema de monitoreo
     let mut sys = System::new_all();
-    
+
     // Buffers para las gráficas (historial)
     let history_len = 100;
     let mut cpu_history: VecDeque<f64> = VecDeque::from(vec![0.0; history_len]);
@@ -36,14 +36,14 @@ fn main() -> io::Result<()> {
 
     // Partículas (Carga de trabajo)
     let mut particles: Vec<Particle> = Vec::new();
-    
+
     // CORRECCIÓN: Tipado explícito 'usize' para poder usar métodos matemáticos
-    let mut particle_count_target: usize = 100; 
+    let mut particle_count_target: usize = 100;
 
     let (mut cols, mut rows) = terminal::size()?;
     let width = (cols as usize).saturating_sub(2);
     let height = (rows as usize).saturating_sub(4);
-    
+
     let mut chart = ChartContext::new(width, height);
     let mut running = true;
     let mut last_sys_update = Instant::now();
@@ -52,7 +52,8 @@ fn main() -> io::Result<()> {
         // --- A. GESTIÓN DE TAMAÑO ---
         let (nc, nr) = terminal::size()?;
         if nc != cols || nr != rows {
-            cols = nc; rows = nr;
+            cols = nc;
+            rows = nr;
             let w = (cols as usize).saturating_sub(2);
             let h = (rows as usize).saturating_sub(4);
             chart = ChartContext::new(w, h);
@@ -67,7 +68,9 @@ fn main() -> io::Result<()> {
                     KeyCode::Char('q') | KeyCode::Esc => running = false,
                     KeyCode::Char('+') => particle_count_target += 500,
                     // Ahora funciona porque sabe que es usize
-                    KeyCode::Char('-') => particle_count_target = particle_count_target.saturating_sub(500),
+                    KeyCode::Char('-') => {
+                        particle_count_target = particle_count_target.saturating_sub(500)
+                    }
                     _ => {}
                 }
             }
@@ -77,7 +80,7 @@ fn main() -> io::Result<()> {
         if last_sys_update.elapsed() >= Duration::from_millis(500) {
             sys.refresh_cpu();
             sys.refresh_memory();
-            
+
             // CPU Global Usage
             let cpu_usage = sys.global_cpu_info().cpu_usage();
             cpu_history.pop_front();
@@ -125,8 +128,12 @@ fn main() -> io::Result<()> {
             p.y += p.vy;
 
             // Rebotar en bordes de la zona inferior
-            if p.x <= 0.0 || p.x >= w_px { p.vx *= -1.0; }
-            if p.y <= sim_top || p.y >= h_px { p.vy *= -1.0; }
+            if p.x <= 0.0 || p.x >= w_px {
+                p.vx *= -1.0;
+            }
+            if p.y <= sim_top || p.y >= h_px {
+                p.vy *= -1.0;
+            }
 
             // Colorear según velocidad (simple heat map)
             let speed = (p.vx.powi(2) + p.vy.powi(2)).sqrt();
@@ -135,21 +142,37 @@ fn main() -> io::Result<()> {
             // Clamp visual
             let dx = p.x.clamp(0.0, w_px - 1.0) as usize;
             let dy = p.y.clamp(sim_top, h_px - 1.0) as usize;
-            
+
             chart.canvas.set_pixel_screen(dx, dy, Some(p.color));
         }
 
         // --- E. RENDERIZADO DE GRÁFICOS (DASHBOARD) ---
-        
+
         // Línea divisoria horizontal
-        chart.canvas.line_screen(0, sim_top as isize, w_px as isize, sim_top as isize, Some(Color::White));
+        chart.canvas.line_screen(
+            0,
+            sim_top as isize,
+            w_px as isize,
+            sim_top as isize,
+            Some(Color::White),
+        );
         // Línea divisoria vertical (arriba)
-        chart.canvas.line_screen((w_px / 2.0) as isize, 0, (w_px / 2.0) as isize, sim_top as isize, Some(Color::White));
+        chart.canvas.line_screen(
+            (w_px / 2.0) as isize,
+            0,
+            (w_px / 2.0) as isize,
+            sim_top as isize,
+            Some(Color::White),
+        );
 
         // Helper para dibujar gráficas en una caja específica
-        let draw_mini_chart = |chart: &mut ChartContext, data: &VecDeque<f64>, x_offset: f64, width: f64, color: Color| {
+        let draw_mini_chart = |chart: &mut ChartContext,
+                               data: &VecDeque<f64>,
+                               x_offset: f64,
+                               width: f64,
+                               color: Color| {
             let height = sim_top; // La altura de la caja es la mitad superior
-            
+
             // Dibujar la línea
             let step_x = width / data.len() as f64;
             let mut prev_x = x_offset;
@@ -159,12 +182,14 @@ fn main() -> io::Result<()> {
                 let curr_x = x_offset + (i as f64 * step_x);
                 // Invertimos Y porque screen coordinates crecen hacia abajo
                 // Y = Base - (ValorNormalizado * AlturaDisponible)
-                let curr_y = height - (val / 100.0 * (height - 2.0)); 
-                
+                let curr_y = height - (val / 100.0 * (height - 2.0));
+
                 chart.canvas.line_screen(
-                    prev_x as isize, prev_y as isize,
-                    curr_x as isize, curr_y as isize,
-                    Some(color)
+                    prev_x as isize,
+                    prev_y as isize,
+                    curr_x as isize,
+                    curr_y as isize,
+                    Some(color),
                 );
                 prev_x = curr_x;
                 prev_y = curr_y;
@@ -177,7 +202,13 @@ fn main() -> io::Result<()> {
         chart.text(&cpu_txt, 0.02, 0.05, Some(Color::Yellow));
 
         // Dibujar RAM (Derecha)
-        draw_mini_chart(&mut chart, &ram_history, w_px / 2.0, w_px / 2.0, Color::Magenta);
+        draw_mini_chart(
+            &mut chart,
+            &ram_history,
+            w_px / 2.0,
+            w_px / 2.0,
+            Color::Magenta,
+        );
         let ram_txt = format!("RAM: {:.1}%", ram_history.back().unwrap_or(&0.0));
         chart.text(&ram_txt, 0.52, 0.05, Some(Color::Magenta));
 
@@ -187,7 +218,9 @@ fn main() -> io::Result<()> {
 
         // Output final
         execute!(stdout, cursor::MoveTo(0, 0))?;
-        let output = chart.canvas.render_with_options(true, Some("SYSTEM MONITOR & STRESS TEST"));
+        let output = chart
+            .canvas
+            .render_with_options(true, Some("SYSTEM MONITOR & STRESS TEST"));
         print!("{}", output.replace('\n', "\r\n"));
         io::stdout().flush()?;
 

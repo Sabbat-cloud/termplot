@@ -5,9 +5,9 @@ use crossterm::{
     execute,
     terminal::{self, ClearType},
 };
+use std::io::Write;
 use std::{thread, time};
 use termplot_rs::ChartContext;
-use std::io::Write;
 
 #[derive(Clone, Copy, Debug)]
 struct Vec3 {
@@ -70,7 +70,7 @@ impl ZBuffer {
 }
 
 fn project_to_screen(
-    v_cam: Vec3,         // already in camera space
+    v_cam: Vec3, // already in camera space
     canvas_w: f64,
     canvas_h: f64,
     scale: f64,
@@ -135,14 +135,7 @@ fn make_triangle() -> [Vec3; 3] {
     ]
 }
 
-fn plot_z(
-    chart: &mut ChartContext,
-    zb: &mut ZBuffer,
-    x: isize,
-    y: isize,
-    z: f64,
-    col: Color,
-) {
+fn plot_z(chart: &mut ChartContext, zb: &mut ZBuffer, x: isize, y: isize, z: f64, col: Color) {
     if x < 0 || y < 0 {
         return;
     }
@@ -278,7 +271,7 @@ fn main() -> std::io::Result<()> {
                     KeyCode::Down => cam.y += 0.18,
 
                     // Camera Z (move forward/back)
-                    KeyCode::PageUp => cam.z += 0.30,   // move camera "forward" => objects appear closer
+                    KeyCode::PageUp => cam.z += 0.30, // move camera "forward" => objects appear closer
                     KeyCode::PageDown => cam.z -= 0.30, // move back
 
                     // Zoom
@@ -335,9 +328,39 @@ fn main() -> std::io::Result<()> {
                 }
             }
             if p.len() == 3 {
-                line_z(chart_ref, zb, p[0].0, p[0].1, p[0].2, p[1].0, p[1].1, p[1].2, Color::Yellow);
-                line_z(chart_ref, zb, p[1].0, p[1].1, p[1].2, p[2].0, p[2].1, p[2].2, Color::Yellow);
-                line_z(chart_ref, zb, p[2].0, p[2].1, p[2].2, p[0].0, p[0].1, p[0].2, Color::Yellow);
+                line_z(
+                    chart_ref,
+                    zb,
+                    p[0].0,
+                    p[0].1,
+                    p[0].2,
+                    p[1].0,
+                    p[1].1,
+                    p[1].2,
+                    Color::Yellow,
+                );
+                line_z(
+                    chart_ref,
+                    zb,
+                    p[1].0,
+                    p[1].1,
+                    p[1].2,
+                    p[2].0,
+                    p[2].1,
+                    p[2].2,
+                    Color::Yellow,
+                );
+                line_z(
+                    chart_ref,
+                    zb,
+                    p[2].0,
+                    p[2].1,
+                    p[2].2,
+                    p[0].0,
+                    p[0].1,
+                    p[0].2,
+                    Color::Yellow,
+                );
             }
         }
 
@@ -353,7 +376,17 @@ fn main() -> std::io::Result<()> {
             }
             for (a, b) in cube_edges.iter() {
                 if let (Some(p1), Some(p2)) = (proj[*a], proj[*b]) {
-                    line_z(chart_ref, zb, p1.0, p1.1, p1.2, p2.0, p2.1, p2.2, Color::Cyan);
+                    line_z(
+                        chart_ref,
+                        zb,
+                        p1.0,
+                        p1.1,
+                        p1.2,
+                        p2.0,
+                        p2.1,
+                        p2.2,
+                        Color::Cyan,
+                    );
                 }
             }
         }
@@ -373,7 +406,17 @@ fn main() -> std::io::Result<()> {
 
                     if let Some(p) = to_screen(v) {
                         if let Some(pp) = prev {
-                            line_z(chart_ref, zb, pp.0, pp.1, pp.2, p.0, p.1, p.2, Color::Magenta);
+                            line_z(
+                                chart_ref,
+                                zb,
+                                pp.0,
+                                pp.1,
+                                pp.2,
+                                p.0,
+                                p.1,
+                                p.2,
+                                Color::Magenta,
+                            );
                         }
                         prev = Some(p);
                     } else {
