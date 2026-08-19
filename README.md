@@ -1,32 +1,32 @@
 # 📈 termplot-rs
 
-**High-performance terminal graphics engine (TUI).**
+High-performance terminal graphics engine (TUI).
 
-`termplot-rs` allows you to render mathematical plots, 3D visualizations, games, and complex interfaces directly in the console using **Unicode Braille characters** (2×4 dot matrix per character) and ANSI colors.
+`termplot-rs` allows you to render mathematical plots, 3D visualizations, games, and complex interfaces directly in the console using Unicode Braille characters (2×4 dot matrix per character) and ANSI colors.
 
-Unlike other TUI plotting libraries, `termplot-rs` is designed for **critical speed**: it uses flat memory buffers (`Vec<u8>`), bitwise operations, mathematical clipping, and a true *zero-allocation* rendering loop to achieve **thousands of FPS** in real-time applications.
+Unlike other TUI plotting libraries, `termplot-rs` is designed for **critical speed**: it uses flat memory buffers (`Vec<u8>`), bitwise operations, mathematical clipping, and a true zero-allocation rendering loop to achieve thousands of FPS in real-time applications.
 
-> 🚀 **New in v0.9.0:** True Zero-Allocation rendering (`render_to`), Cohen-Sutherland Line Clipping, Filled Primitives (`rect_filled`, `circle_filled`), Pixel Erasing (`unset_pixel`), and Color Blending modes!
+**🚀 New in v0.4.0:** Logarithmic Scaling (`AxisScale::Log10`), True Zero-Allocation rendering (`render_to`), Cohen-Sutherland Line Clipping, Filled Primitives (`rect_filled`, `circle_filled`), Pixel Erasing (`unset_pixel`), and Color Blending modes!
 
 ---
 
 ## ✨ Key Features
 
-* **High Resolution:** 8 sub-pixels per character (Braille 2x4). A 100x50 terminal yields a 200x200 effective pixel canvas.
-* **Extreme Performance:**
-  * **Flat buffers** for maximum CPU cache locality.
-  * **True Zero-Allocation Loop:** Render directly to `std::fmt::Write` or `stdout.lock()` without allocating a single `String` per frame.
-  * **Cohen-Sutherland Clipping:** Mathematically discards off-screen geometry before rasterization, saving massive CPU cycles during zoom or out-of-bounds drawing. 
-* **Advanced Pixel & Color Control:**
-  * Erase and toggle individual Braille dots (`unset_pixel`, `toggle_pixel`).
-  * **Color Blending Modes:** Control how sub-pixels sharing the same terminal cell interact (`Overwrite` vs `KeepFirst`).
-* **Drawing Primitives:**
-  * Lines (Bresenham), Circles, Polygons.
-  * **Filled Shapes:** `rect_filled` and `circle_filled`.
-  * Text Layer (overlay).
-* **Ready-to-use Charts:**
-  * `scatter()`, `line_chart()`, `bar_chart()`, `pie_chart()`, `plot_function()`.
-* **Auto-Range & Smart Axes:** Automatic axis scaling and tick generation based on your dataset.
+*   **High Resolution:** 8 sub-pixels per character (Braille 2x4). A 100x50 terminal yields a 200x200 effective pixel canvas.
+*   **Extreme Performance:**
+    *   Flat buffers for maximum CPU cache locality.
+    *   **True Zero-Allocation Loop:** Render directly to `std::fmt::Write` or `stdout.lock()` without allocating a single `String` per frame.
+    *   **Cohen-Sutherland Clipping:** Mathematically discards off-screen geometry before rasterization, saving massive CPU cycles during zoom or out-of-bounds drawing.
+*   **Advanced Pixel & Color Control:**
+    *   Erase and toggle individual Braille dots (`unset_pixel`, `toggle_pixel`).
+    *   **Color Blending Modes:** Control how sub-pixels sharing the same terminal cell interact (`Overwrite` vs `KeepFirst`).
+*   **Drawing Primitives:**
+    *   Lines (Bresenham), Circles, Polygons.
+    *   Filled Shapes: `rect_filled` and `circle_filled`.
+    *   Text Layer (overlay).
+*   **Ready-to-use Charts:**
+    *   `scatter()`, `line_chart()`, `bar_chart()`, `pie_chart()`, `plot_function()`.
+    *   **Auto-Range & Smart Axes:** Automatic axis scaling and tick generation (supports both Linear and **Log10** scales) based on your dataset.
 
 ---
 
@@ -36,8 +36,9 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-termplot-rs = "0.9.0"
+termplot-rs = "0.4.0"
 colored = "2.0"
+
 # Optional, for generating test data
 rand = "0.8"   
 
@@ -74,7 +75,44 @@ fn main() {
 
 ```
 
-### 🏎️ Zero-Allocation Render Loop (For Games/Animations)
+## 📊 Logarithmic Scales (New)
+
+Perfect for visualizing data with massive spikes, such as server latency, network traffic, or exponential growth.
+
+```rust
+use termplot_rs::{ChartContext, AxisScale};
+use colored::Color;
+
+fn main() {
+    let mut chart = ChartContext::new(60, 15);
+    
+    // Set Y-axis to Logarithmic scale
+    chart.set_y_scale(AxisScale::Log10);
+
+    // Data with a massive spike (e.g., server latency in ms)
+    let latency_data: Vec<(f64, f64)> = vec![
+        (1.0, 45.0), (2.0, 50.0), (3.0, 48.0), 
+        (4.0, 1500.0), // Sudden massive spike!
+        (5.0, 55.0), (6.0, 49.0),
+    ];
+
+    // Use get_auto_range_scaled to factor in the Log10 transformation
+    let (range_x, range_y) = ChartContext::get_auto_range_scaled(
+        &latency_data, 0.1, chart.x_scale(), chart.y_scale()
+    );
+
+    chart.draw_axes(range_x, range_y, Some(Color::White));
+    chart.line_chart(&latency_data, Some(Color::Red));
+    chart.text("Latency (ms)", 0.5, 0.9, Some(Color::Yellow));
+
+    println!("{}", chart.canvas.render());
+}
+
+```
+
+---
+
+## 🏎️ Zero-Allocation Render Loop (For Games/Animations)
 
 If you are building a real-time app at 60 FPS, avoid `render()` (which creates a new `String` every frame) and use `render_to()`:
 
@@ -83,8 +121,10 @@ use std::fmt::Write;
 
 // Inside your game loop:
 let mut buffer = String::with_capacity(8000); 
+
 chart.canvas.render_to(&mut buffer, true, Some("60 FPS UI"))?;
 print!("{}", buffer);
+
 buffer.clear(); // Reuse memory!
 
 ```
@@ -97,13 +137,13 @@ To avoid mathematical confusion, `termplot-rs` offers two coordinate modes and m
 
 | Coordinate Mode | Origin (0,0) | Y Direction | Best For |
 | --- | --- | --- | --- |
-| **Cartesian** | **Bottom-Left** | Grows **Up** | Math plots, functions, charts. |
-| **Screen** | **Top-Left** | Grows **Down** | UI, Games, Sprites, 3D Projections. |
+| **Cartesian** | Bottom-Left | Grows Up | Math plots, functions, charts. |
+| **Screen** | Top-Left | Grows Down | UI, Games, Sprites, 3D Projections. |
 
 **Pixel Manipulation Methods:**
 
-* `set_pixel / set_pixel_screen`: Turns a dot ON.
-* `unset_pixel / unset_pixel_screen`: Turns a dot OFF (Erases).
+* `set_pixel` / `set_pixel_screen`: Turns a dot ON.
+* `unset_pixel` / `unset_pixel_screen`: Turns a dot OFF (Erases).
 * `toggle_pixel_screen`: Flips the current state of a dot.
 
 ---
@@ -112,57 +152,31 @@ To avoid mathematical confusion, `termplot-rs` offers two coordinate modes and m
 
 The repository includes advanced examples to showcase the library's power.
 
-### 1. Primitive Shapes & Blending (NEW)
-
+**1. Primitive Shapes & Blending (NEW)**
 Interactive screensaver showcasing Cohen-Sutherland clipping, filled shapes, pixel erasing (dynamic holes), and real-time color blending mode switching.
+`cargo run --release --example primitives_demo`
 
-```bash
-cargo run --release --example primitives_demo
-
-```
-
-### 2. Solar System Kepler 3D
-
+**2. Solar System Kepler 3D**
 Full physics simulation of the Solar System using true orbital mechanics, 3D rotations, and a custom software Z-Buffer.
+`cargo run --release --example solarsystem_kepler`
 
-```bash
-cargo run --release --example solarsystem_kepler
-
-```
-
-### 3. Sprite Engine
-
+**3. Sprite Engine**
 A retro space-invaders style demo showcasing how to load and render custom ASCII art as fast Braille sprites.
+`cargo run --release --example sprite_demo`
 
-```bash
-cargo run --release --example sprite_demo
-
-```
-
-### 4. Interactive Fractals
-
+**4. Interactive Fractals**
 Mandelbrot and Julia explorer with infinite Zoom and rotation.
+`cargo run --release --example fractalmove`
 
-```bash
-cargo run --release --example fractalmove
-
-```
-
-### 5. Chart Gallery
-
+**5. Chart Gallery**
 Shows all available static chart types (Bars, Scatter, Pie, Auto-Ticks).
-
-```bash
-cargo run --example demo
-
-```
+`cargo run --example demo`
 
 ---
 
 ## ⚡ Performance
 
-`termplot-rs` is rigorously optimized.
-In a benchmark with a **236x104 sub-pixel** canvas (full fill with trigonometric noise and particles), on a modern machine:
+`termplot-rs` is rigorously optimized. In a benchmark with a 236x104 sub-pixel canvas (full fill with trigonometric noise and particles), on a modern machine:
 
 * **Debug Mode:** ~60 FPS
 * **Release Mode:** ~1600+ FPS
@@ -174,12 +188,12 @@ This makes it viable for audio visualization, high-frequency server monitoring, 
 ## 🗺️ Roadmap
 
 * [x] Memory optimization (Flat `Vec<u8>` buffers).
-* [x] Explicit coordinate APIs (`screen` vs `cartesian`).
+* [x] Explicit coordinate APIs (screen vs cartesian).
 * [x] Mathematical Cohen-Sutherland Line Clipping.
 * [x] True zero-allocation rendering (`render_to`).
 * [x] Filled Primitives (`rect_filled`, `circle_filled`) & Erasers.
 * [x] Color Blending Policies (`Overwrite`, `KeepFirst`).
-* [ ] Logarithmic scaling support.
+* [x] Logarithmic scaling support.
 * [ ] Automatic Legend Box.
 * [ ] Trait-based pluggable terminal renderers (`CellRenderer` for HalfBlocks/Quadrants).
 
@@ -187,6 +201,5 @@ This makes it viable for audio visualization, high-frequency server monitoring, 
 
 ## 📄 License
 
-This project is licensed under the **MIT** license. Feel free to use it in your CLI tools, dashboards, or graphical experiments.
+This project is licensed under the MIT license. Feel free to use it in your CLI tools, dashboards, or graphical experiments.
 
-```
