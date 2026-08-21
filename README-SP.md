@@ -150,28 +150,58 @@ Para evitar confusiones matemáticas, `termplot-rs` ofrece dos modos de coordena
 
 ## 🧪 Ejemplos y Demos
 
-El repositorio incluye ejemplos avanzados para mostrar la potencia de la biblioteca.
+El repositorio incluye muchos ejemplos para mostrar la potencia y versatilidad de la biblioteca.
 
-**1. Formas Primitivas y Mezcla de Color (NUEVO)**
-Salvapantallas interactivo que muestra el recorte de Cohen-Sutherland, formas con relleno, borrado de píxeles (agujeros dinámicos) y cambio de modo de mezcla de colores en tiempo real.
-`cargo run --release --example primitives_demo`
+**1. 3dengine.rs**
+`cargo run --release --example 3dengine`
 
-**2. Sistema Solar Kepler 3D**
-Simulación física completa del Sistema Solar usando verdadera mecánica orbital, rotaciones 3D y un Z-Buffer por software personalizado.
-`cargo run --release --example solarsystem_kepler`
+**2. barcentertext.rs**
+`cargo run --release --example barcentertext`
 
-**3. Motor de Sprites**
-Demo de estilo retro "space invaders" que muestra cómo cargar y renderizar arte ASCII personalizado como sprites rápidos en Braille.
-`cargo run --release --example sprite_demo`
+**3. demo.rs**
+`cargo run --release --example demo.rs`
 
-**4. Fractales Interactivos**
-Explorador de Mandelbrot y Julia con zoom y rotación infinitos.
+**4. fireworksinterac.rs**
+`cargo run --release --example fireworksinterac`
+
+**5. fireworks.rs**
+`cargo run --example fireworks`
+
+**6. fractalmove.rs**
 `cargo run --release --example fractalmove`
 
-**5. Galería de Gráficos**
-Muestra todos los tipos de gráficos estáticos disponibles (Barras, Dispersión, Circular, Marcas Automáticas).
-`cargo run --example demo`
+**7. infrastructure_monitor.rs**
+`cargo run --release --example infrastructure_monitor`
 
+**8. logaritmica.rs**
+`cargo run --release --example logaritmica`
+
+**9. math_stress.rs**
+`cargo run --release --example math_stress`
+
+**10. plasma.rs**
+`cargo run --example plasma`
+
+**11. primitives_demo.rs**
+`cargo run --release --example primitives_demo`
+
+**12. showcase.rs**
+`cargo run --release --example showcase`
+
+**13. solarsystem_kepler.rs**
+`cargo run --release --example solarsystem_kepler`
+
+**14. solarsystemnobody.rs**
+`cargo run --release --example solarsystemnobody`
+
+**15. sprite_demo.rs**
+`cargo run --example sprite_demo`
+
+**16. system_monitor.rs**
+`cargo run --release --example system_monitor`
+
+**17. waves.rs**
+`cargo run --example waves`
 ---
 
 ## ⚡ Rendimiento
